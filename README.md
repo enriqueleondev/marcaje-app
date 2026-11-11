@@ -12,7 +12,7 @@ En muchas escuelas la asistencia se pasa en papel o en una hoja de cálculo, cla
 
 Marcaje separa dos momentos:
 
-1. **Entrada a la escuela.** El alumno acerca su credencial (pegatina NFC o código QR) a una tableta en la puerta. Toma un segundo y funciona aunque se caiga el internet.
+1. **Entrada a la escuela.** El alumno acerca su credencial (pegatina NFC o código QR) a una tableta en la puerta, o le muestra el QR a su cámara. Toma un segundo y funciona aunque se caiga el internet.
 2. **Pase de lista en clase.** El docente abre su lista y cada alumno ya aparece con su hora de entrada. Confirma a todos de un clic y solo corrige excepciones: retardo, falta, o "no en aula" (entró a la escuela pero no llegó a clase).
 
 Dirección ve en los reportes quién falta más, quién entró pero no llegó a clase y qué docentes no pasan lista.
@@ -31,10 +31,11 @@ Dirección ve en los reportes quién falta más, quién entró pero no llegó a 
 
 ## Qué hace
 
-- **Kiosco (PWA)** para tabletas: lectores USB de NFC y QR, confirmación a pantalla completa, cola sin conexión y anti-duplicado.
+- **Kiosco (PWA)** para tabletas: lectores USB de NFC y QR, **lectura con la cámara** de la tableta o una webcam (modo USB, cámara o ambos, configurable por kiosco), confirmación a pantalla completa, cola sin conexión y anti-duplicado.
 - **Pase de lista** en una retícula de lugares: táctil (botones de 44 px como mínimo) o con teclado (`P`, `R`, `F`, `C`), "confirmar todas las entradas", 5 órdenes y lugares que el docente acomoda arrastrando. Solo se edita durante el horario de la clase.
 - **Credenciales**: código QR aleatorio de 8 caracteres (sin 0/O/1/I y nunca derivado de datos personales), UID de NFC vinculado desde el panel, regenerar y revocar, impresión en tamaño tarjeta.
-- **Alumnos, docentes y grupos**: alta masiva por CSV (todo o nada, con errores por línea), contraseñas temporales de 24 h y clases que cada docente arma.
+- **Alumnos, docentes y grupos**: alta masiva por CSV de alumnos (todo o nada, con errores por línea) y de personal (vista previa con errores por fila antes de confirmar, sin correos repetidos), clases que cada docente arma.
+- **Cuentas del personal**: contraseñas temporales de 24 h que obligan a cambiarse, suspender y reactivar, cerrar sus sesiones en todos los dispositivos, desbloquear tras intentos fallidos y último acceso. Nunca se puede quedar la escuela sin una cuenta de dirección activa.
 - **Entrada manual** con motivo obligatorio para quien olvidó su credencial.
 - **Reportes** por alumno, "entró pero no llegó a clase", entradas manuales y clases sin pase de lista, con exportación a CSV.
 - **Roles**: dirección (todo) y docente (ve a todos los alumnos, pero solo edita a los de sus clases). Los alumnos no tienen cuenta.
@@ -70,6 +71,8 @@ flowchart LR
 
 **Anti-duplicado en dos capas.** La tableta ignora al mismo alumno durante 5 minutos (configurable) para responder rápido, y el servidor aplica la misma ventana alrededor de la hora real de la lectura. Así funciona también entre dos kioscos y con lecturas que llegan tarde desde la cola.
 
+**Cámara sin dependencias pesadas.** En modo cámara, el kiosco muestra la vista en vivo en un recuadro cuadrado con guías y lee el QR con `BarcodeDetector` nativo (Chrome en Android). Si el navegador no lo tiene, descarga bajo demanda zxing (un archivo aparte, que en modo USB nunca se carga). La lectura se pausa durante la confirmación y no relee el mismo código en 5 s; cada lectura pasa por el mismo anti-duplicado y la misma cola sin conexión que el lector USB. El permiso se pide solo en modo cámara, después de explicar para qué es, y si se niega el kiosco sigue aceptando el lector USB. `Permissions-Policy` solo permite la cámara en `/kiosco`.
+
 **Lectores como teclado.** Los lectores NFC y QR son dispositivos USB HID: "teclean" el código y Enter. El kiosco captura el teclado globalmente, sin campo enfocado, y distingue al lector de una persona por la velocidad entre teclas. El QR codifica solo letras y números, sin guion, para que cualquier lector lo teclee igual sin importar el idioma del teclado de la tableta.
 
 **La base de datos garantiza las reglas de credenciales.** Columnas generadas (`active_value`, `active_student`) con índices únicos impiden que un código o pegatina activos pertenezcan a dos alumnos, o que un alumno tenga dos QR activos, sin perder el historial de credenciales revocadas.
@@ -78,26 +81,26 @@ flowchart LR
 
 **Seguridad** (detalle en [`docs/seguridad.md`](docs/seguridad.md)):
 - **Cabeceras:** CSP con nonce por petición (más estricta en el kiosco), HSTS, `X-Frame-Options`, `nosniff`, `Referrer-Policy` y `Permissions-Policy`.
-- **Login:** bloqueo de 15 minutos por cuenta y por IP; contraseñas temporales que vencen y obligan a cambiarse.
+- **Login:** bloqueo de 15 minutos tras 5 intentos fallidos por cuenta (desde cualquier IP, desbloqueable por dirección) y tras 20 por IP; contraseñas temporales que vencen y obligan a cambiarse.
 - **Token del kiosco:** se guarda solo su SHA-256, es revocable y tiene límite de peticiones.
 - **CSV:** los exportados neutralizan fórmulas (`=`, `+`, `-`, `@`).
 - **Bitácora:** registra altas, bajas, contraseñas, credenciales, entradas manuales y accesos.
 
 ## Pruebas
 
-**140 pruebas automatizadas** (PHPUnit, más de 1,400 aserciones), que pasan en SQLite y en MySQL 8.4:
+**155 pruebas automatizadas** (PHPUnit, más de 1,500 aserciones), que pasan en SQLite y en MySQL 8.4:
 
 | Área | Pruebas | Qué cubren |
 |---|---|---|
-| Alumnos, docentes, grupos y credenciales | 45 | CSV de todo o nada (Excel, Windows-1252, punto y coma), regenerar y revocar QR, una pegatina por alumno, QR descargado que se vuelve a leer como imagen |
+| Alumnos, personal, grupos y credenciales | 54 | CSV de alumnos de todo o nada y de personal con vista previa (Excel, Windows-1252, punto y coma), cuentas (cerrar sesiones, suspender, desbloquear, última cuenta de dirección), regenerar y revocar QR, QR descargado que se vuelve a leer como imagen |
 | Acceso | 22 | Inicio de sesión, contraseñas temporales y su vencimiento, cuentas desactivadas |
 | Seguridad | 20 | Todas las rutas de dirección contra un docente, IDOR, ids bloqueados en Livewire, cabeceras y CSP, bloqueo de login, límite del kiosco, CSV, bitácora |
-| Kiosco y entrada manual | 19 | API, idempotencia por UUID, ventana anti-duplicado, hora del dispositivo, padrón por versiones |
+| Kiosco y entrada manual | 25 | API, idempotencia por UUID, ventana anti-duplicado, hora del dispositivo, padrón por versiones, modo de lectura por kiosco y política de cámara |
 | Pase de lista | 18 | Ventana de edición, estados, "confirmar todas", órdenes y acomodo de lugares, entradas del kiosco durante la clase |
 | Reportes | 10 | Reglas de conteo, filtros, sesiones sin pase de lista, exportación |
 | Otras | 6 | Comandos de consola y generador de contraseñas |
 
-Además, los flujos de la interfaz se probaron en Chrome con Playwright: teclado y arrastre del pase de lista (mouse y táctil), kiosco con y sin conexión, y que la CSP no bloquee nada.
+Además, los flujos de la interfaz se probaron en Chrome con Playwright: teclado y arrastre del pase de lista (mouse y táctil), kiosco con y sin conexión, lectura por cámara con una cámara simulada que transmite el QR de un alumno, permiso de cámara negado, y que la CSP no bloquee nada.
 
 ```bash
 php artisan test
@@ -107,7 +110,7 @@ php artisan test
 
 - **Backend:** PHP 8.3+, Laravel 13, MySQL 8 (SQLite en desarrollo y pruebas).
 - **Panel:** Blade, Livewire 4, Alpine, CSS propio con tokens de diseño, sin framework de CSS.
-- **Kiosco:** JavaScript sin framework, IndexedDB, service worker, Web Audio y Wake Lock.
+- **Kiosco:** JavaScript sin framework, IndexedDB, service worker, Web Audio, Wake Lock, `getUserMedia` + `BarcodeDetector` y `@zxing/library` como respaldo.
 - **QR:** `chillerlan/php-qrcode` (SVG y PNG).
 - **Herramientas:** Vite, Pint, PHPUnit, Docker (MySQL local) y cloudflared (HTTPS para probar en la tableta).
 

@@ -52,6 +52,14 @@
             <aside class="sec">
                 <h2 class="sec-title">Acceso</h2>
                 @error('access')<p class="error" role="alert">{{ $message }}</p>@enderror
+                <dl class="facts compact-facts">
+                    <dt>Último acceso</dt><dd class="mono">{{ $user->last_login_at?->timezone(\App\Models\Setting::get('timezone'))->format('d/m/Y H:i') ?? 'Nunca' }}</dd>
+                    <dt>Sesiones abiertas</dt><dd class="mono">{{ $user->activeSessions() }}</dd>
+                </dl>
+                @if ($locked = \App\Support\LoginThrottle::accountLockedFor($user->email))
+                    <div class="notice is-error" style="margin:12px 0">Bloqueada por intentos fallidos. Se desbloquea sola en {{ ceil($locked / 60) }} min.</div>
+                    <form method="POST" action="{{ route('teachers.unlock', $user) }}" style="margin-bottom:14px">@csrf<button class="btn">Desbloquear ahora</button></form>
+                @endif
                 <div class="access-actions">
                     @can('issueTemporaryPassword', $user)
                         <form method="POST" action="{{ route('teachers.temporary-password', $user) }}">
@@ -64,11 +72,17 @@
                     @if ($user->is(auth()->user()))
                         <p class="muted">Esta es tu cuenta. Para cambiar tu contraseña usa <a class="link" href="{{ route('password.edit') }}">Cambiar contraseña</a>.</p>
                     @else
+                        <form method="POST" action="{{ route('teachers.revoke-sessions', $user) }}">
+                            @csrf
+                            <button class="btn">Cerrar sus sesiones</button>
+                        </form>
+                        <p class="hint">Sale de todos sus dispositivos. Útil si olvidó cerrar sesión en un equipo compartido.</p>
+
                         <form method="POST" action="{{ route('teachers.toggle-active', $user) }}">
                             @csrf @method('PATCH')
-                            <button class="btn">{{ $user->is_active ? 'Desactivar cuenta' : 'Activar cuenta' }}</button>
+                            <button class="btn">{{ $user->is_active ? 'Suspender cuenta' : 'Reactivar cuenta' }}</button>
                         </form>
-                        <p class="hint">{{ $user->is_active ? 'No podrá entrar hasta que la actives de nuevo.' : 'Podrá volver a entrar con su contraseña.' }}</p>
+                        <p class="hint">{{ $user->is_active ? 'Sale de inmediato y no podrá entrar hasta que la reactives.' : 'Podrá volver a entrar con su contraseña.' }}</p>
 
                         @can('delete', $user)
                             <form method="POST" action="{{ route('teachers.destroy', $user) }}" data-confirm="¿Dar de baja a {{ $user->full_name }}? Ya no podrá entrar; su historial se conserva.">

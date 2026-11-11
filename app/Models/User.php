@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Support\LoginThrottle;
 use App\Support\TemporaryPassword;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -114,11 +115,25 @@ class User extends Authenticatable
     {
         return match (true) {
             $this->trashed() => ['falta', 'Dada de baja'],
-            ! $this->is_active => ['falta', 'Desactivada'],
+            ! $this->is_active => ['falta', 'Suspendida'],
+            LoginThrottle::accountLockedFor($this->email) > 0 => ['retardo', 'Bloqueada por intentos fallidos'],
             $this->temporaryPasswordExpired() => ['retardo', 'Contraseña temporal vencida'],
             $this->must_change_password => ['confirmar', 'Contraseña temporal, vence en '.max(1, (int) ceil(now()->diffInMinutes($this->password_expires_at) / 60)).' h'],
             default => ['presente', 'Activa'],
         };
+    }
+
+    /** Cierra todas sus sesiones abiertas (incluido "mantener la sesión"). Devuelve cuántas había. */
+    public function revokeSessions(): int
+    {
+        $this->forceFill(['remember_token' => null])->saveQuietly();
+
+        return DB::table('sessions')->where('user_id', $this->id)->delete();
+    }
+
+    public function activeSessions(): int
+    {
+        return DB::table('sessions')->where('user_id', $this->id)->count();
     }
 
     /** ¿El alumno está inscrito en alguna clase de este docente? */

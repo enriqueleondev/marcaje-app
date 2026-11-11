@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Http\Requests\StudentRequest;
 use App\Models\AuditLog;
 use App\Models\Group;
 use App\Models\Student;
 use App\Models\StudentImport;
 use App\Models\User;
+use App\Support\CsvReader;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -37,8 +37,6 @@ class StudentCsvImporter
         'grado' => 'grado', 'semestre' => 'grado',
         'grupo' => 'grupo',
     ];
-
-    private const REQUIRED = ['matricula', 'nombre', 'paterno'];
 
     /**
      * @return array{import: StudentImport, created: int, updated: int, errors: list<array{line: int, message: string}>}
@@ -78,65 +76,9 @@ class StudentCsvImporter
     /** @return list<array{line: int, data: array<string, string>}> */
     private function parse(string $path, array &$errors): array
     {
-        $content = (string) file_get_contents($path);
-        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
-        if (! mb_check_encoding($content, 'UTF-8')) {
-            $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
-        }
-        $content = str_replace(["\r\n", "\r"], "\n", $content);
-
-        $lines = explode("\n", $content);
-        $headerLine = $lines[0] ?? '';
-        $delimiter = collect([',', ';', "\t"])->sortByDesc(fn ($d) => substr_count($headerLine, $d))->first();
-
-        $handle = fopen('php://temp', 'r+');
-        fwrite($handle, $content);
-        rewind($handle);
-
-        $header = fgetcsv($handle, null, $delimiter, '"', '');
-        if (! $header || count(array_filter($header, fn ($h) => trim((string) $h) !== '')) === 0) {
-            $errors[] = ['line' => 1, 'message' => 'El archivo está vacío.'];
-
-            return [];
-        }
-
-        $columns = array_map(fn ($h) => self::ALIASES[self::normalizeHeader((string) $h)] ?? null, $header);
-        $missing = array_diff(self::REQUIRED, $columns);
-        if ($missing) {
-            $names = ['matricula' => 'matricula', 'nombre' => 'nombre', 'paterno' => 'apellido_paterno'];
-            $errors[] = ['line' => 1, 'message' => 'Faltan columnas: '.implode(', ', array_map(fn ($m) => $names[$m], $missing)).'. Descarga la plantilla para ver el formato.'];
-
-            return [];
-        }
-
-        $rows = [];
-        $line = 1;
-        while (($values = fgetcsv($handle, null, $delimiter, '"', '')) !== false) {
-            $line++;
-            if ($values === [null] || count(array_filter($values, fn ($v) => trim((string) $v) !== '')) === 0) {
-                continue;
-            }
-            $data = [];
-            foreach ($columns as $i => $key) {
-                if ($key !== null) {
-                    $data[$key] = StudentRequest::clean((string) ($values[$i] ?? '')) ?? '';
-                }
-            }
-            $rows[] = ['line' => $line, 'data' => $data];
-
-            if (count($rows) > self::MAX_ROWS) {
-                $errors[] = ['line' => $line, 'message' => 'El archivo tiene más de '.self::MAX_ROWS.' filas. Divídelo en varios archivos.'];
-
-                return [];
-            }
-        }
-        fclose($handle);
-
-        if (! $rows) {
-            $errors[] = ['line' => 2, 'message' => 'El archivo no tiene alumnos, solo encabezados.'];
-        }
-
-        return $rows;
+        return CsvReader::read($path, self::ALIASES,
+            ['matricula' => 'matricula', 'nombre' => 'nombre', 'paterno' => 'apellido_paterno'],
+            self::MAX_ROWS, 'El archivo no tiene alumnos, solo encabezados.', $errors);
     }
 
     /** @return list<array{student: array<string, mixed>, group: ?array{0:int,1:int}, line: int}> */
@@ -236,10 +178,5 @@ class StudentCsvImporter
     {
         // Acepta "2", "2°", "2.º", "2o"
         return preg_match('/^\s*(\d{1,2})\s*(?:\.?\s*[°ºo])?\s*$/u', $value, $m) ? (int) $m[1] : null;
-    }
-
-    private static function normalizeHeader(string $header): string
-    {
-        return trim(preg_replace('/[^a-z0-9]+/', '_', Str::lower(Str::ascii(trim($header)))), '_');
     }
 }

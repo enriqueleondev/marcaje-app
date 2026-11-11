@@ -294,6 +294,10 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); 
 .sched { display: inline-block; margin-right: 10px; white-space: nowrap; }
 tr.is-muted td { opacity: .55; }
 
+/* ── cuentas ── */
+.compact-facts { grid-template-columns: 160px 1fr; margin-bottom: 10px; }
+.compact-facts dt, .compact-facts dd { padding: 8px 0; }
+
 /* ── entrada manual ── */
 .manual-tag { color: var(--pink); }
 .notice.is-error::before { background: var(--pink); }

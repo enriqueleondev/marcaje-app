@@ -59,6 +59,8 @@ const state = {
     strip: [],
     today: 0,
     online: navigator.onLine,
+    readMode: 'usb',       // usb | camera | both (Ajustes › Kioscos)
+    pausedUntil: 0,        // la cámara no lee mientras se muestra la confirmación
     audio: null,
 };
 
@@ -119,7 +121,8 @@ async function pair(token) {
     }
     state.token = token;
     try {
-        await api('/estado');
+        const s = await api('/estado');
+        await kv.set('readMode', s.kiosk.read_mode ?? 'usb');
     } catch (e) {
         state.token = null;
         err.textContent = e instanceof Unauthorized
@@ -135,7 +138,18 @@ async function pair(token) {
 }
 
 // ── Inicio (toque para sonido, pantalla completa y pantalla encendida) ──
-function showStart() {
+async function showStart() {
+    // El modo de lectura decide si hay que explicar y pedir la cámara al iniciar.
+    try {
+        const s = await api('/estado');
+        await kv.set('readMode', s.kiosk.read_mode ?? 'usb');
+    } catch (e) {
+        if (e instanceof Unauthorized) return handleUnauthorized();
+    }
+    state.readMode = (await kv.get('readMode')) ?? 'usb';
+    const camera = state.readMode !== 'usb';
+    $('start-camera').hidden = !camera;
+    $('start-sub').textContent = camera ? 'Activa la cámara, el sonido y la pantalla completa' : 'Activa el sonido y la pantalla completa';
     $('start').hidden = false;
     $('start-button').focus();
 }
@@ -149,6 +163,8 @@ $('start-button').addEventListener('click', async () => {
     keepAwake();
     $('start').hidden = true;
     $('kiosk').hidden = false;
+    // El permiso de cámara se pide aquí, dentro del toque, solo si el modo la usa.
+    if (state.readMode !== 'usb') startCamera();
     await boot();
 });
 
@@ -173,6 +189,7 @@ async function boot() {
     sync();
     setInterval(sync, SYNC_EVERY_MS);
     setInterval(refreshRoster, ROSTER_EVERY_MS);
+    setInterval(refreshState, ROSTER_EVERY_MS);
     setInterval(tick, 1000);
     tick();
 }
@@ -184,6 +201,12 @@ async function refreshState() {
         $('kiosk-name').textContent = [s.kiosk.name, s.kiosk.location].filter(Boolean).join(', ');
         state.timezone = s.timezone;
         state.windowMin = s.duplicate_window_minutes;
+        // Si dirección cambió el modo de lectura, se aplica recargando (fuera de una confirmación).
+        const mode = s.kiosk.read_mode ?? 'usb';
+        if (mode !== state.readMode) {
+            await kv.set('readMode', mode);
+            if (Date.now() > state.pausedUntil) location.reload();
+        }
         setToday(s.today_count);
         if (!state.strip.some((x) => x.pending)) {
             state.strip = s.recent.map((r) => ({ name: shortName(r.student), group: r.student.g, method: r.method, time: r.time }));
@@ -406,6 +429,7 @@ function flash(kind, { student, method, time }) {
     $('flash-time').textContent = time ?? '';
     $('flash-method').textContent = method ?? '';
     el.hidden = false;
+    state.pausedUntil = Date.now() + FLASH_MS + 300;
     // reinicia la animación del monograma
     const g = $('flash-initials'); g.style.animation = 'none'; void g.offsetWidth; g.style.animation = '';
     beep(kind);
@@ -442,6 +466,131 @@ function tick() {
     $('date').textContent = new Intl.DateTimeFormat('es-MX', { timeZone: state.timezone, weekday: 'long', day: 'numeric', month: 'long' }).format(now);
     const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: state.timezone, hour: 'numeric', hourCycle: 'h23' }).format(now));
     $('greeting').textContent = h >= 5 && h < 12 ? 'Buenos días.' : h >= 12 && h < 19 ? 'Buenas tardes.' : 'Buenas noches.';
+}
+
+// ── Cámara (modo "Cámara" o "Ambos") ─────────────────────
+// Lee el QR con BarcodeDetector nativo (Chrome en Android) o, si no existe, con zxing
+// (se descarga solo en ese caso). Las lecturas pasan por el mismo handleScan: mismo
+// anti-duplicado y misma cola sin conexión. No lee durante la confirmación de 1.5 s.
+const CAM_EVERY_MS = 180;
+const CAM_SAME_CODE_MS = 5000; // el mismo QR frente a la cámara no se vuelve a leer en 5 s
+const cam = { stream: null, facing: 'environment', deviceId: null, decode: null, busy: false, last: new Map(), timer: null };
+
+async function startCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) return cameraProblem('unsupported');
+    cam.deviceId = (await kv.get('cameraId')) ?? null;
+    try {
+        await openStream();
+    } catch (e) {
+        return cameraProblem(e?.name === 'NotAllowedError' || e?.name === 'SecurityError' ? 'denied' : 'unavailable');
+    }
+    $('usb-target').hidden = true;
+    $('cam').hidden = false;
+    $('cam-also').hidden = state.readMode !== 'both';
+    await listCameras();
+    cam.decode ??= await makeDecoder();
+    clearInterval(cam.timer);
+    cam.timer = setInterval(cameraTick, CAM_EVERY_MS);
+}
+
+async function openStream() {
+    cam.stream?.getTracks().forEach((t) => t.stop());
+    const video = cam.deviceId ? { deviceId: { exact: cam.deviceId } } : { facingMode: { ideal: cam.facing } };
+    cam.stream = await navigator.mediaDevices.getUserMedia({ video: { ...video, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    const v = $('cam-video');
+    v.srcObject = cam.stream;
+    await v.play().catch(() => {});
+    const settings = cam.stream.getVideoTracks()[0]?.getSettings?.() ?? {};
+    // La cámara frontal se ve como espejo (más natural); la lectura usa la imagen original.
+    $('cam-video').parentElement.classList.toggle('mirror', settings.facingMode === 'user' || (!settings.facingMode && cam.facing === 'user'));
+}
+
+async function listCameras() {
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+    const select = $('cam-select');
+    const current = cam.stream?.getVideoTracks()[0]?.getSettings?.().deviceId;
+    select.replaceChildren(...devices.map((d, i) => Object.assign(document.createElement('option'), { value: d.deviceId, textContent: d.label || `Cámara ${i + 1}`, selected: d.deviceId === current })));
+    select.hidden = devices.length < 2;
+    $('cam-flip').hidden = devices.length < 2;
+}
+
+$('cam-select').addEventListener('change', async (e) => {
+    cam.deviceId = e.target.value;
+    await kv.set('cameraId', cam.deviceId);
+    try { await openStream(); } catch { cameraProblem('unavailable'); }
+});
+$('cam-flip').addEventListener('click', async () => {
+    cam.facing = cam.facing === 'environment' ? 'user' : 'environment';
+    cam.deviceId = null;
+    await kv.del('cameraId');
+    try { await openStream(); await listCameras(); } catch { cameraProblem('unavailable'); }
+});
+
+async function makeDecoder() {
+    if ('BarcodeDetector' in window) {
+        try {
+            if ((await window.BarcodeDetector.getSupportedFormats()).includes('qr_code')) {
+                const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+                return async (video) => (await detector.detect(video))[0]?.rawValue ?? null;
+            }
+        } catch {}
+    }
+    const { QRCodeReader, RGBLuminanceSource, BinaryBitmap, HybridBinarizer } = await import('@zxing/library');
+    const reader = new QRCodeReader();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    return async (video) => {
+        const w = video.videoWidth, h = video.videoHeight;
+        if (!w || !h) return null;
+        const side = Math.min(w, h), size = Math.min(side, 640);
+        canvas.width = canvas.height = size;
+        ctx.drawImage(video, (w - side) / 2, (h - side) / 2, side, side, 0, 0, size, size); // el cuadrado central
+        const { data } = ctx.getImageData(0, 0, size, size);
+        const lum = new Uint8ClampedArray(size * size);
+        for (let i = 0, j = 0; i < data.length; i += 4, j++) lum[j] = (data[i] * 77 + data[i + 1] * 150 + data[i + 2] * 29) >> 8;
+        try {
+            return reader.decode(new BinaryBitmap(new HybridBinarizer(new RGBLuminanceSource(lum, size, size)))).getText();
+        } catch {
+            return null; // no hay QR en este cuadro
+        } finally {
+            reader.reset();
+        }
+    };
+}
+
+async function cameraTick() {
+    if (cam.busy || !cam.decode || document.hidden || Date.now() < state.pausedUntil) return;
+    const video = $('cam-video');
+    if (video.readyState < 2) return;
+    cam.busy = true;
+    try {
+        const raw = await cam.decode(video);
+        const code = raw ? normalize(raw) : '';
+        if (code.length >= 4) {
+            const now = Date.now();
+            if (now - (cam.last.get(code) ?? 0) > CAM_SAME_CODE_MS) {
+                cam.last.set(code, now);
+                await handleScan(code);
+            }
+        }
+    } catch {
+        // un cuadro que falla no detiene la lectura
+    } finally {
+        cam.busy = false;
+    }
+}
+
+function cameraProblem(kind) {
+    clearInterval(cam.timer);
+    $('cam').hidden = true;
+    $('usb-target').hidden = false;
+    const msg = $('cam-msg');
+    msg.innerHTML = {
+        denied: '<b>No hay permiso para usar la cámara.</b> Para activarlo, toca el candado junto a la dirección › Permisos › Cámara › Permitir, y recarga la página. Mientras tanto puedes pasar tu credencial por el lector USB.',
+        unavailable: '<b>No se pudo abrir la cámara.</b> Revisa que esté conectada y que otra app no la esté usando, y recarga. Mientras tanto puedes usar el lector USB.',
+        unsupported: '<b>Este navegador no permite usar la cámara aquí.</b> Abre el kiosco en Chrome con HTTPS. Mientras tanto puedes usar el lector USB.',
+    }[kind];
+    msg.hidden = false;
 }
 
 // ── Inicio de la página ───────────────────────────────────

@@ -119,6 +119,7 @@ Regenerar = revocar la actual y crear otra. Todo alumno recibe un QR al crearse;
 |---|---|---|
 | `id` | | |
 | `name`, `location` | string | |
+| `read_mode` | string | `usb` (lectores USB), `camera` (cámara integrada o webcam) o `both`; se configura en Ajustes › Kioscos |
 | `token_hash` | string | sha256, único; el token se muestra una sola vez |
 | `last_seen_at`, `revoked_at` | timestamp, nullable | |
 | timestamps | | |

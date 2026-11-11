@@ -6,7 +6,10 @@
         </div>
         <div class="head-actions">
             <a class="btn" href="{{ route('teachers.index', $show === 'bajas' ? [] : ['ver' => 'bajas']) }}">{{ $show === 'bajas' ? 'Ver cuentas activas' : 'Ver bajas' }}</a>
-            @if ($show !== 'bajas')<a class="btn primary" href="{{ route('teachers.create') }}">Agregar cuenta</a>@endif
+            @if ($show !== 'bajas')
+                <a class="btn" href="{{ route('teachers.import') }}">Importar CSV</a>
+                <a class="btn primary" href="{{ route('teachers.create') }}">Agregar cuenta</a>
+            @endif
         </div>
     </div>
 

@@ -39,6 +39,17 @@ class UserPolicy
             : Response::allow();
     }
 
+    public function revokeSessions(User $user, User $target): Response
+    {
+        if (! $user->isAdmin()) {
+            return Response::deny();
+        }
+
+        return $user->is($target)
+            ? Response::deny('Para cerrar tu propia sesión usa "Salir".')
+            : Response::allow();
+    }
+
     public function deactivate(User $user, User $target): Response
     {
         return $this->removalCheck($user, $target, 'desactivar');

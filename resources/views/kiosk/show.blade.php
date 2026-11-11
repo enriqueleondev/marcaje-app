@@ -32,9 +32,13 @@
     <section class="screen start" id="start" hidden>
         <button type="button" id="start-button">
             <span class="target small"><i></i><i></i><i></i><i></i></span>
-            <span class="start-title">Iniciar kiosco</span>
+            <span class="start-title" id="start-title">Iniciar kiosco</span>
             <span class="start-sub" id="start-sub">Activa el sonido y la pantalla completa</span>
         </button>
+        <p class="start-camera" id="start-camera" hidden>
+            Este kiosco lee los códigos QR con la cámara. La imagen no se guarda ni se envía a ningún lado: solo se lee el código.
+            Al iniciar, el navegador te pedirá permiso para usarla.
+        </p>
     </section>
 
     {{-- Kiosco --}}
@@ -46,7 +50,21 @@
             <div class="clock"><b id="clock">--:--:--</b><span id="date"></span></div>
         </div>
         <div class="zone">
-            <div class="target"><i></i><i></i><i></i><i></i><span>Lector NFC<br>y QR</span></div>
+            <div class="target" id="usb-target"><i></i><i></i><i></i><i></i><span>Lector NFC<br>y QR</span></div>
+            <div class="cam" id="cam" hidden>
+                <div class="cam-frame">
+                    <video id="cam-video" playsinline muted autoplay aria-label="Vista de la cámara"></video>
+                    <span class="cam-guide" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                </div>
+                <p class="cam-hint">Centra tu código QR aquí</p>
+                <p class="cam-also" id="cam-also" hidden>También puedes pasar tu credencial por el lector.</p>
+                <div class="cam-controls">
+                    <label class="sr-only" for="cam-select">Cámara</label>
+                    <select id="cam-select" hidden></select>
+                    <button type="button" id="cam-flip" hidden>Cambiar cámara</button>
+                </div>
+            </div>
+            <div class="cam-msg" id="cam-msg" role="alert" hidden></div>
             <div class="status" aria-live="polite">
                 <span id="net"><i class="sq on"></i>En línea</span>
                 <span id="queue">Sin pendientes</span>

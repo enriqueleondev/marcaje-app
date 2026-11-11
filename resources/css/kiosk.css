@@ -20,6 +20,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 button, input { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
 .mono { font-family: var(--mono); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 
 .screen { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; z-index: 10; background: var(--bg); }
@@ -54,6 +55,29 @@ button, input { font: inherit; color: inherit; }
 .target.small { width: 120px; }
 .target.small i { width: 22px; height: 22px; }
 .target.small::after { inset: -14px; }
+
+/* ── inicio con cámara ── */
+.start-camera { max-width: 52ch; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.5; margin: 0 auto; padding: 0 24px; }
+.start { grid-template-rows: 1fr auto; }
+
+/* ── cámara: recuadro cuadrado con vista en vivo y guía (mismo trazo que el recuadro del lector) ── */
+.cam { display: grid; justify-items: center; gap: 1.4cqw; }
+.cam-frame { position: relative; width: 26cqw; aspect-ratio: 1; border-radius: 2px; overflow: hidden; background: #000; outline: 1px solid var(--line); outline-offset: 1.4cqw; }
+.cam-frame video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cam-frame.mirror video { transform: scaleX(-1); }
+.cam-guide { position: absolute; inset: 14%; pointer-events: none; }
+.cam-guide i { position: absolute; width: 18%; height: 18%; border: 0 solid var(--blue); filter: drop-shadow(0 0 2px rgb(0 0 0 / .6)); }
+.cam-guide i:nth-of-type(1) { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; }
+.cam-guide i:nth-of-type(2) { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; }
+.cam-guide i:nth-of-type(3) { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; }
+.cam-guide i:nth-of-type(4) { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; }
+.cam-hint { font-family: var(--serif); font-size: 2.1cqw; line-height: 1.1; margin-top: 1.2cqw; }
+.cam-also { font-size: 1.15cqw; color: var(--muted); }
+.cam-controls { display: flex; gap: 1cqw; align-items: center; }
+.cam-controls select, .cam-controls button { font-family: var(--mono); font-size: 1.05cqw; min-height: 44px; padding: 0 1.2cqw; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 2px; cursor: pointer; }
+.cam-msg { max-width: 34cqw; margin-top: 4cqw; padding: 1.2cqw 1.4cqw; border: 1px solid var(--pink); border-radius: 2px; font-size: 1.2cqw; line-height: 1.45; color: var(--text); background: var(--bg); }
+.cam-msg b { color: var(--pink); font-weight: 500; }
+.zone { align-content: center; }
 
 /* ── kiosco ── */
 body:has(.kiosk:not([hidden])) { container-type: size; }
@@ -105,6 +129,9 @@ body:has(.kiosk:not([hidden])) { container-type: size; }
     .kiosk { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
     .zone { border-left: 0; border-top: 1px solid var(--line); padding: 8cqw 0; }
     .target { width: 40cqw; }
+    .cam-frame { width: 56cqw; }
+    .cam-hint { font-size: 5cqw; }
+    .cam-msg { max-width: 80cqw; font-size: 3.2cqw; }
     .strip { grid-template-columns: 1fr; }
     .strip li + li { border-left: 0; border-top: 1px solid var(--line); }
     .flash { grid-template-columns: 1fr; }

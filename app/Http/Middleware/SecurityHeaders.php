@@ -26,7 +26,9 @@ class SecurityHeaders
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
+        // La cámara solo se permite en el kiosco (modo de lectura con cámara); en el resto, apagada.
+        $camera = $request->is('kiosco', 'kiosco/*') ? 'camera=(self)' : 'camera=()';
+        $response->headers->set('Permissions-Policy', "{$camera}, microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()");
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
 
         if ($request->isSecure()) {

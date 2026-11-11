@@ -38,4 +38,41 @@
 
         <div class="form-actions"><button class="btn primary" type="submit">Guardar ajustes</button></div>
     </form>
+
+    <section class="block" id="kioscos">
+        <h2 class="block-title">Kioscos: modo de lectura</h2>
+        @if ($kiosks->isEmpty())
+            <p class="empty">Aún no hay kioscos. <a class="link" href="{{ route('kiosks.index') }}">Agrega uno.</a></p>
+        @else
+            <form method="POST" action="{{ route('settings.kiosks') }}" novalidate>
+                @csrf @method('PUT')
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead><tr><th>Kiosco</th><th>Modo</th></tr></thead>
+                        <tbody>
+                            @foreach ($kiosks as $k)
+                                <tr>
+                                    <td><span class="serif cell-name">{{ $k->name }}</span>@if ($k->location)<br><span class="muted">{{ $k->location }}</span>@endif</td>
+                                    <td>
+                                        <div class="radio-row" role="radiogroup" aria-label="Modo de {{ $k->name }}">
+                                            @foreach (\App\Enums\KioskReadMode::cases() as $mode)
+                                                <label class="check"><input type="radio" name="modes[{{ $k->id }}]" value="{{ $mode->value }}" @checked($k->read_mode === $mode)> {{ $mode->label() }}</label>
+                                            @endforeach
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @error('modes.*')<p class="error">{{ $message }}</p>@enderror
+                <ul class="plain" style="max-width:70ch">
+                    <li><b>Lector USB:</b> lectores NFC y QR conectados a la tableta (el modo de siempre).</li>
+                    <li><b>Cámara:</b> la cámara de la tableta o la webcam de la PC lee el QR. Pide permiso de cámara la primera vez.</li>
+                    <li><b>Ambos:</b> la cámara queda activa y los lectores USB siguen funcionando.</li>
+                </ul>
+                <div class="form-actions"><button class="btn primary" type="submit">Guardar modos</button></div>
+            </form>
+        @endif
+    </section>
 </x-layouts.app>

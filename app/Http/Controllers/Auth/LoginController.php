@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Support\LoginThrottle;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,13 +16,6 @@ use Illuminate\View\View;
 
 class LoginController extends Controller
 {
-    private const MAX_ATTEMPTS = 5;
-
-    private const MAX_ATTEMPTS_PER_IP = 20;
-
-    /** Bloqueo de 15 minutos tras agotar los intentos. */
-    private const DECAY_SECONDS = 900;
-
     public function create(): View
     {
         return view('auth.login');
@@ -38,12 +32,10 @@ class LoginController extends Controller
             'password.required' => 'Escribe tu contraseña.',
         ]);
 
-        $throttleKey = Str::transliterate(Str::lower($credentials['email']).'|'.$request->ip());
-        $ipKey = 'login-ip|'.$request->ip();
+        $accountKey = LoginThrottle::accountKey($credentials['email']);
+        $ipKey = LoginThrottle::ipKey($request->ip());
 
-        // Dos límites: por cuenta+IP (5 intentos) y por IP (20), para frenar
-        // también a quien prueba muchas cuentas distintas desde el mismo equipo.
-        foreach ([[$throttleKey, self::MAX_ATTEMPTS], [$ipKey, self::MAX_ATTEMPTS_PER_IP]] as [$key, $max]) {
+        foreach ([[$accountKey, LoginThrottle::MAX_PER_ACCOUNT], [$ipKey, LoginThrottle::MAX_PER_IP]] as [$key, $max]) {
             if (! RateLimiter::tooManyAttempts($key, $max)) {
                 continue;
             }
@@ -56,8 +48,8 @@ class LoginController extends Controller
         }
 
         if (! Auth::attempt([...$credentials, 'is_active' => true], $request->boolean('remember'))) {
-            RateLimiter::hit($throttleKey, self::DECAY_SECONDS);
-            RateLimiter::hit($ipKey, self::DECAY_SECONDS);
+            RateLimiter::hit($accountKey, LoginThrottle::DECAY_SECONDS);
+            RateLimiter::hit($ipKey, LoginThrottle::DECAY_SECONDS);
             AuditLog::record('auth.failed', null, ['email' => Str::limit($credentials['email'], 120, ''), 'ip' => $request->ip()]);
 
             throw ValidationException::withMessages([
@@ -65,7 +57,7 @@ class LoginController extends Controller
             ]);
         }
 
-        RateLimiter::clear($throttleKey);
+        RateLimiter::clear($accountKey);
 
         /** @var User $user */
         $user = Auth::user();

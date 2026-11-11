@@ -31,7 +31,7 @@ class KioskApiController extends Controller
             ->map(fn (Entry $e) => $this->entryPayload($e, $e->student, $e->method));
 
         return response()->json([
-            'kiosk' => ['name' => $kiosk->name, 'location' => $kiosk->location],
+            'kiosk' => ['name' => $kiosk->name, 'location' => $kiosk->location, 'read_mode' => $kiosk->read_mode->value],
             'institution' => Setting::institutionName(),
             'timezone' => Setting::get('timezone'),
             'duplicate_window_minutes' => (int) Setting::get('duplicate_window_minutes'),

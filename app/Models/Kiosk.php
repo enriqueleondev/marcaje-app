@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\KioskReadMode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
@@ -11,13 +12,15 @@ use Illuminate\Support\Str;
  */
 class Kiosk extends Model
 {
-    protected $fillable = ['name', 'location'];
+    protected $fillable = ['name', 'location', 'read_mode'];
+
+    protected $attributes = ['read_mode' => 'usb'];
 
     protected $hidden = ['token_hash'];
 
     protected function casts(): array
     {
-        return ['last_seen_at' => 'datetime', 'revoked_at' => 'datetime'];
+        return ['last_seen_at' => 'datetime', 'revoked_at' => 'datetime', 'read_mode' => KioskReadMode::class];
     }
 
     public function entries(): HasMany

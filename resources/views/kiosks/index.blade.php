@@ -16,13 +16,14 @@
                 @else
                     <div class="table-wrap">
                         <table class="table">
-                            <thead><tr><th>Kiosco</th><th>Estado</th><th>Hoy</th><th><span class="sr-only">Acciones</span></th></tr></thead>
+                            <thead><tr><th>Kiosco</th><th>Estado</th><th>Lectura</th><th>Hoy</th><th><span class="sr-only">Acciones</span></th></tr></thead>
                             <tbody>
                                 @foreach ($kiosks as $k)
                                     @php([$sq, $status] = $k->status())
                                     <tr>
                                         <td><span class="serif cell-name">{{ $k->name }}</span>@if ($k->location)<br><span class="muted">{{ $k->location }}</span>@endif</td>
                                         <td><span class="tag"><i class="sq {{ $sq }}"></i>{{ $status }}</span></td>
+                                        <td><a class="link" href="{{ route('settings.edit') }}#kioscos">{{ $k->read_mode->label() }}</a></td>
                                         <td class="mono">{{ $k->today_count }}</td>
                                         <td class="actions-cell"><a class="link" href="{{ route('kiosks.show', $k) }}">Administrar</a></td>
                                     </tr>

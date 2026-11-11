@@ -21,7 +21,7 @@ Resultado: **135 pruebas pasando**, 9 hallazgos corregidos, 6 riesgos aceptados 
 | 3 | Media | **Sin cabeceras de seguridad ni CSP.** | Middleware `SecurityHeaders`: CSP con nonce por petición, `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (cámara, micrófono, ubicación, pagos, USB apagados), `Cross-Origin-Opener-Policy` y `Strict-Transport-Security` (1 año) en HTTPS. El kiosco y la API tienen una CSP más estricta, sin `unsafe-eval`. |
 | 4 | Media | **Cookie de sesión no forzada a HTTPS** y contenido de sesión sin cifrar (puede guardar una contraseña temporal recién generada como aviso de un solo uso). | En `APP_ENV=production`, `secure` y `encrypt` quedan activos aunque falten las variables. `http_only` y `same_site=lax` ya estaban. `.env.production.example` con todo explícito. |
 | 5 | Media | **Inyección de fórmulas en CSV exportados** (un nombre importado como `=HYPERLINK(…)` se ejecutaría al abrir el reporte en Excel). | `App\Support\Csv` antepone `'` a celdas que empiezan con `=`, `+`, `-`, `@`, tabulador o retorno. Aplica a todos los reportes. |
-| 6 | Baja | **Bloqueo de login débil**: solo por cuenta+IP y de 60 s. | Dos límites: 5 intentos por cuenta+IP y 20 por IP (frena a quien prueba muchas cuentas), con **bloqueo de 15 minutos**. Se registran en bitácora los accesos, fallos y bloqueos (`auth.login`, `auth.failed`, `auth.locked`). |
+| 6 | Baja | **Bloqueo de login débil**: solo por cuenta+IP y de 60 s. | Dos límites: 5 intentos por cuenta (desde cualquier IP, desbloqueable por dirección) y 20 por IP (frena a quien prueba muchas cuentas), con **bloqueo de 15 minutos**. Se registran en bitácora los accesos, fallos y bloqueos (`auth.login`, `auth.failed`, `auth.locked`). |
 | 7 | Baja | Detrás de un proxy o túnel la app no sabía que la conexión era HTTPS (no enviaba HSTS y generaba enlaces `http://`). | Se confía en cabeceras `X-Forwarded-*` **solo desde proxies locales** (127.0.0.1, ::1). Confiar en cualquiera permitiría falsear la IP y saltarse el límite por IP. |
 | 8 | Baja | Entradas manuales de docentes sin restricción de alumno. | Búsqueda limitada a alumnos de sus clases y autorización al elegir y al guardar. |
 | 9 | Baja | Páginas de error con `<style>` sin nonce (se verían sin estilo con la CSP). | Vistas de error publicadas en `resources/views/errors` con nonce. |
@@ -39,7 +39,14 @@ Resultado: **135 pruebas pasando**, 9 hallazgos corregidos, 6 riesgos aceptados 
 - **Asignación masiva**: todos los modelos con `$fillable`/`$guarded`.
 - **Errores**: con `APP_DEBUG=false` la página de error no muestra mensajes, clases ni rutas (probado).
 - **`.env` y `storage`** quedan fuera de `public/`; no hay enlace `public/storage`.
-- **Bitácora (`audit_logs`)** con autor: altas, bajas y reactivaciones de alumnos y personal; cambios de grupo; contraseñas (temporal y cambio propio); credenciales (regenerar, revocar, vincular y reemplazar NFC); entradas manuales; importaciones CSV; kioscos (alta, nuevo token, desvincular); "confirmar todas" del pase de lista; accesos y fallos de login. Probado en `AuditTrailTest`.
+- **Bitácora (`audit_logs`)** con autor: altas (individuales e importadas), bajas, suspensiones, reactivaciones, cierres de sesión forzados y desbloqueos de personal; altas, bajas y reactivaciones de alumnos; cambios de grupo; contraseñas (temporal y cambio propio); credenciales (regenerar, revocar, vincular y reemplazar NFC); entradas manuales; importaciones CSV; kioscos (alta, nuevo token, desvincular); "confirmar todas" del pase de lista; accesos y fallos de login. Probado en `AuditTrailTest`.
+
+## Cámara del kiosco
+
+- La cámara solo se puede usar en `/kiosco`: `Permissions-Policy: camera=(self)` ahí y `camera=()` en el resto del sitio.
+- El permiso se pide solo si el kiosco está en modo "Cámara" o "Ambos", después de una pantalla que explica para qué es.
+- Las imágenes se procesan en la tableta para leer el código y no se guardan ni se envían; al servidor solo llega el código leído, igual que con el lector USB, y pasa por las mismas validaciones (credencial activa, anti-duplicado, UUID).
+- El lector de respaldo (zxing) se sirve desde el mismo dominio y funciona con la CSP estricta del kiosco (sin `unsafe-eval`).
 
 ## Riesgos aceptados
 
@@ -50,7 +57,8 @@ Resultado: **135 pruebas pasando**, 9 hallazgos corregidos, 6 riesgos aceptados 
 | Padrón (nombres y códigos) guardado en las tabletas | Necesario para identificar alumnos sin conexión. | Tabletas bajo resguardo de la escuela; se borra al desvincular. Mencionado en el aviso de privacidad. |
 | Marcas individuales del pase de lista fuera de `audit_logs` | Cada marca guarda quién y cuándo (`marked_by`, `marked_at`), sin duplicarlo en la bitácora. | Se registra "confirmar todas". |
 | La bitácora no tiene pantalla de consulta | Los datos están en la tabla `audit_logs`. | Pendiente si dirección lo necesita. |
-| Aviso de un solo uso con la contraseña temporal en la sesión | Se muestra una vez al crear la cuenta. | Sesión cifrada en producción y se borra en la siguiente petición. |
+| Bloqueo por cuenta tras 5 intentos fallidos (desde cualquier IP) | Permite que alguien bloquee a propósito una cuenta ajena durante 15 minutos. Se eligió así para que el bloqueo funcione aunque el atacante cambie de IP y para que dirección pueda desbloquear. | Dirección ve "Bloqueada por intentos fallidos" y puede desbloquear; el bloqueo vence solo; queda en bitácora (`auth.locked`, `user.unlocked`). |
+| Aviso de un solo uso con contraseñas temporales en la sesión (alta individual e importación) | Se muestra una vez al crear la cuenta. | Sesión cifrada en producción y se borra en la siguiente petición. |
 
 ## Pendiente para el despliegue (no son fallas del código)
 

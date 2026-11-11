@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\KioskReadMode;
 use App\Models\AuditLog;
 use App\Models\Group;
+use App\Models\Kiosk;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,8 +40,32 @@ class SettingsController extends Controller
                 'groups_per_grade' => (int) Setting::get('groups_per_grade'),
             ],
             'timezones' => self::TIMEZONES,
+            'kiosks' => Kiosk::orderBy('name')->get(),
             'groupsCount' => Group::count(),
         ]);
+    }
+
+    /** Ajustes › Kioscos: modo de lectura de cada kiosco (USB, cámara o ambos). */
+    public function updateKiosks(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'modes' => ['required', 'array'],
+            'modes.*' => ['required', Rule::enum(KioskReadMode::class)],
+        ], ['modes.*' => 'Elige un modo válido para cada kiosco.']);
+
+        $changed = [];
+        foreach (Kiosk::whereIn('id', array_keys($data['modes']))->get() as $kiosk) {
+            $mode = $data['modes'][$kiosk->id];
+            if ($kiosk->read_mode->value !== $mode) {
+                $kiosk->update(['read_mode' => $mode]);
+                $changed[] = "{$kiosk->name}: {$mode}";
+            }
+        }
+        if ($changed) {
+            AuditLog::record('kiosks.read_mode_updated', meta: ['changed' => $changed]);
+        }
+
+        return back()->with('status', $changed ? 'Modo de lectura guardado. Cada kiosco lo aplica al recargar o en su siguiente sincronización.' : 'No había cambios.');
     }
 
     public function update(Request $request): RedirectResponse

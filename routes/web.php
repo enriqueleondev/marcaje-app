@@ -12,6 +12,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RollCallController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\StaffImportController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentImportController;
 use Illuminate\Support\Facades\Route;
@@ -73,6 +74,7 @@ Route::middleware(['auth', 'account'])->group(function () {
 
         Route::get('/ajustes', [SettingsController::class, 'edit'])->name('settings.edit');
         Route::put('/ajustes', [SettingsController::class, 'update'])->name('settings.update');
+        Route::put('/ajustes/kioscos', [SettingsController::class, 'updateKiosks'])->name('settings.kiosks');
 
         Route::get('/reportes', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reportes/exportar', [ReportController::class, 'export'])->name('reports.export');
@@ -84,12 +86,20 @@ Route::middleware(['auth', 'account'])->group(function () {
 
         Route::get('/docentes', [StaffController::class, 'index'])->name('teachers.index');
         Route::get('/docentes/nuevo', [StaffController::class, 'create'])->name('teachers.create');
+        Route::get('/docentes/importar', [StaffImportController::class, 'create'])->name('teachers.import');
+        Route::post('/docentes/importar', [StaffImportController::class, 'preview'])->name('teachers.import.preview');
+        Route::post('/docentes/importar/confirmar', [StaffImportController::class, 'confirm'])->name('teachers.import.confirm');
+        Route::post('/docentes/importar/cancelar', [StaffImportController::class, 'cancel'])->name('teachers.import.cancel');
+        Route::get('/docentes/importar/listo', [StaffImportController::class, 'done'])->name('teachers.import.done');
+        Route::get('/docentes/importar/plantilla.csv', [StaffImportController::class, 'template'])->name('teachers.import.template');
         Route::post('/docentes', [StaffController::class, 'store'])->name('teachers.store');
         Route::get('/docentes/{user}', [StaffController::class, 'edit'])->name('teachers.edit');
         Route::put('/docentes/{user}', [StaffController::class, 'update'])->name('teachers.update');
         Route::post('/docentes/{user}/contrasena-temporal', [StaffController::class, 'temporaryPassword'])->name('teachers.temporary-password');
         Route::patch('/docentes/{user}/activo', [StaffController::class, 'toggleActive'])->name('teachers.toggle-active');
         Route::delete('/docentes/{user}', [StaffController::class, 'destroy'])->name('teachers.destroy');
+        Route::post('/docentes/{user}/cerrar-sesiones', [StaffController::class, 'revokeSessions'])->name('teachers.revoke-sessions');
+        Route::post('/docentes/{user}/desbloquear', [StaffController::class, 'unlock'])->name('teachers.unlock');
         Route::post('/docentes/{id}/reactivar', [StaffController::class, 'restore'])->whereNumber('id')->name('teachers.restore');
     });
 });

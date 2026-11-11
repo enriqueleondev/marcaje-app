@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Http\Requests\StaffRequest;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Support\LoginThrottle;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -99,21 +100,45 @@ class StaffController extends Controller
         }
 
         $user->forceFill(['is_active' => ! $user->is_active])->save();
+        if (! $user->is_active) {
+            $user->revokeSessions(); // fuera de inmediato, no hasta su siguiente clic
+        }
         AuditLog::record($user->is_active ? 'user.activated' : 'user.deactivated', $user);
 
         return redirect()->route('teachers.edit', $user)->with('status', $user->is_active
             ? "La cuenta de {$user->full_name} está activa de nuevo."
-            : "La cuenta de {$user->full_name} quedó desactivada. Ya no puede entrar.");
+            : "La cuenta de {$user->full_name} quedó suspendida y sus sesiones se cerraron.");
     }
 
     public function destroy(User $user): RedirectResponse
     {
         Gate::authorize('delete', $user);
 
+        $user->revokeSessions();
         $user->delete();
         AuditLog::record('user.deleted', $user);
 
         return redirect()->route('teachers.index')->with('status', "{$user->full_name} fue dado de baja.");
+    }
+
+    /** Cierra todas sus sesiones (por ejemplo, si olvidó cerrar sesión en un equipo compartido). */
+    public function revokeSessions(Request $request, User $user): RedirectResponse
+    {
+        Gate::authorize('revokeSessions', $user);
+        $n = $user->revokeSessions();
+        AuditLog::record('user.sessions_revoked', $user, ['count' => $n]);
+
+        return redirect()->route('teachers.edit', $user)->with('status', $n === 1 ? 'Se cerró 1 sesión.' : "Se cerraron {$n} sesiones.");
+    }
+
+    /** Quita el bloqueo por intentos fallidos antes de que venzan los 15 minutos. */
+    public function unlock(User $user): RedirectResponse
+    {
+        $this->authorize('update', $user);
+        LoginThrottle::unlockAccount($user->email);
+        AuditLog::record('user.unlocked', $user);
+
+        return redirect()->route('teachers.edit', $user)->with('status', "La cuenta de {$user->full_name} quedó desbloqueada.");
     }
 
     public function restore(int $id): RedirectResponse

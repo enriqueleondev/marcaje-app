@@ -26,7 +26,7 @@ class EnsureAccountIsUsable
         }
 
         if (! $user->is_active || $user->trashed()) {
-            return $this->logout($request, 'Tu cuenta está desactivada. Habla con dirección.');
+            return $this->logout($request, 'Tu cuenta está suspendida. Habla con dirección.');
         }
 
         if ($user->temporaryPasswordExpired()) {

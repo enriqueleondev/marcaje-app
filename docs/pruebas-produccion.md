@@ -60,6 +60,16 @@ Marca cada punto. Si algo falla, anota qué hiciste, qué esperabas y qué pasó
 - [ ] Dirección › Docentes › un docente › Generar contraseña temporal: se muestra una sola vez; al recargar ya no aparece.
 - [ ] Desactivar un docente con su sesión abierta en otro navegador: en su siguiente clic sale al login con aviso.
 
+### Gestión de personal (dirección)
+- [ ] Docentes › Importar CSV › Descargar plantilla. Llenar 3 filas con un correo repetido y otra con un correo que ya existe: la vista previa marca el error en cada fila y no deja confirmar.
+- [ ] Corregir el archivo e importarlo "como dirección": la vista previa dice "Se crearán N cuentas"; al confirmar aparece la lista de contraseñas temporales y "Copiar todo". Al recargar esa página ya no se muestran.
+- [ ] Entrar con una de esas cuentas: obliga a cambiar la contraseña.
+- [ ] En la ficha de un docente se ven "Último acceso" y "Sesiones abiertas". Con su sesión abierta en otro navegador, "Cerrar sus sesiones": en su siguiente clic sale al login.
+- [ ] "Suspender cuenta" con su sesión abierta: sale de inmediato. "Reactivar cuenta": puede volver a entrar.
+- [ ] Fallar 5 veces el login de un docente (aunque sea desde dispositivos distintos): queda "Bloqueada por intentos fallidos" en la lista. En su ficha, "Desbloquear ahora": ya puede entrar.
+- [ ] Intentar quitarte tu propio rol de dirección, suspenderte o darte de baja: no se permite. Con una sola cuenta de dirección activa, tampoco se puede degradar ni suspender.
+- [ ] Como docente, abrir `/docentes/importar`: 403.
+
 ### Kiosco (Galaxy Tab, por el túnel)
 - [ ] Vincular escaneando el QR desde Kioscos › Administrar. Tocar "Iniciar kiosco": entra en pantalla completa.
 - [ ] **QR:** pasar una credencial impresa por el lector QR. Pantalla de "Entrada registrada" con nombre, grupo, hora y "QR" durante 1.5 s, con sonido.
@@ -71,6 +81,25 @@ Marca cada punto. Si algo falla, anota qué hiciste, qué esperabas y qué pasó
 - [ ] **Recarga sin conexión:** con el modo avión, recargar la página. El kiosco vuelve a abrir.
 - [ ] **Desvincular:** en el panel, Kioscos › Desvincular. La tableta muestra la pantalla de vincular en su siguiente lectura o sincronización.
 - [ ] Probar los 2 kioscos a la vez con la misma credencial: el segundo marca duplicado.
+
+### Kiosco con cámara (Galaxy Tab y PC)
+Configura el modo en el panel: **Ajustes › Kioscos: modo de lectura** (Lector USB, Cámara o Ambos). El kiosco lo aplica al recargar.
+
+En la **Galaxy Tab** (cámara integrada, Chrome con `BarcodeDetector` nativo):
+- [ ] Modo "Cámara": recargar el kiosco. La pantalla de inicio explica para qué es la cámara; al tocar "Iniciar kiosco" Chrome pide permiso. Aceptar.
+- [ ] Se ve la vista en vivo dentro del recuadro cuadrado con las esquinas y "Centra tu código QR aquí". Mostrar una credencial impresa: confirmación de 1.5 s con "QR" y sonido.
+- [ ] Dejar el mismo QR frente a la cámara: no se repite la confirmación (pausa de 1.5 s y 5 s de espera para el mismo código). Pasado ese tiempo, si sigue ahí, sale "Tu entrada ya estaba registrada".
+- [ ] Mostrar el QR desde la pantalla de un celular: se lee igual.
+- [ ] Si hay cámara frontal y trasera: "Cambiar cámara" alterna; la frontal se ve en espejo. El selector recuerda la elegida al recargar.
+- [ ] Modo "Ambos": con la cámara activa, pasar una pegatina por el lector NFC y un QR por el lector USB: los dos registran.
+- [ ] Permiso negado: en Ajustes del sitio (candado) poner Cámara en "Bloquear" y recargar. Aparece el aviso con instrucciones y el lector USB sigue funcionando. Volver a permitir y recargar: la cámara regresa.
+- [ ] Modo avión con la cámara activa: las lecturas por cámara entran a la cola ("por enviar") y se envían al volver la red.
+- [ ] Modo "Lector USB": no pide permiso de cámara ni la enciende.
+
+En la **PC** (webcam; Chrome de escritorio, que en Linux usa el lector de respaldo zxing):
+- [ ] Abrir el kiosco por el túnel en Chrome, modo "Cámara" o "Ambos": pide permiso y muestra la webcam. Si hay más de una cámara, el selector permite elegir.
+- [ ] Mostrar a la webcam un QR impreso o en el celular: registra la entrada (puede tardar un poco más que en la tableta).
+- [ ] En el panel (cualquier página que no sea el kiosco) la cámara está bloqueada: en las herramientas de Chrome, la cabecera `Permissions-Policy` dice `camera=()`; en `/kiosco` dice `camera=(self)`.
 
 ### Pase de lista (docente, en la tableta o el celular)
 - [ ] Pase de lista muestra las clases del día; la que está en curso dice "En curso".
