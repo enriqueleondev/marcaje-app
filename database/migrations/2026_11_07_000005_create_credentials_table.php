@@ -10,7 +10,10 @@ return new class extends Migration
     {
         Schema::create('credentials', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained()->cascadeOnDelete();
+            // RESTRICT y no CASCADE: MySQL no permite acciones en cascada sobre una columna
+            // que alimenta una columna generada almacenada (active_student). Los alumnos
+            // nunca se borran de verdad (baja = soft delete), así que no hace falta.
+            $table->foreignId('student_id')->constrained()->restrictOnDelete();
             $table->string('type', 8); // qr | nfc
             $table->string('value', 64);
             $table->timestamp('revoked_at')->nullable();

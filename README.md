@@ -85,7 +85,7 @@ flowchart LR
 
 ## Pruebas
 
-**140 pruebas automatizadas** (PHPUnit, más de 1,400 aserciones):
+**140 pruebas automatizadas** (PHPUnit, más de 1,400 aserciones), que pasan en SQLite y en MySQL 8.4:
 
 | Área | Pruebas | Qué cubren |
 |---|---|---|
@@ -129,7 +129,7 @@ Entra en http://localhost:8000 con `direccion@example.com` o `docente@example.co
 
 ## Licencia
 
-[PolyForm Noncommercial 1.0.0](LICENSE.md): puedes leer, ejecutar y modificar el código con fines no comerciales (aprender, evaluar, uso personal). **No se permite el uso comercial.** Si te interesa usarlo en tu escuela o empresa, escríbeme desde [mi portafolio](https://enriqueleondev.github.io/).
+[PolyForm Noncommercial 1.0.0](LICENSE.md) (aviso de copyright en [NOTICE](NOTICE)): puedes leer, ejecutar y modificar el código con fines no comerciales (aprender, evaluar, uso personal). **No se permite el uso comercial.** Si te interesa usarlo en tu escuela o empresa, escríbeme desde [mi portafolio](https://enriqueleondev.github.io/).
 
 Las dependencias conservan sus propias licencias (Laravel y la mayoría de paquetes: MIT; tipografías Instrument Serif y Geist: SIL OFL 1.1).
 

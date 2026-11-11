@@ -1,5 +1,3 @@
-Required Notice: Copyright 2026 Enrique Rentería León (https://enriqueleondev.github.io/)
-
 # PolyForm Noncommercial License 1.0.0
 
 <https://polyformproject.org/licenses/noncommercial/1.0.0>

@@ -35,17 +35,22 @@ class AuthorizationTest extends TestCase
             ->filter(fn ($r) => in_array('role:admin', $r->gatherMiddleware(), true));
     }
 
+    /** @var array<string, int> ids reales por nombre de parámetro (en MySQL no empiezan en 1) */
+    private array $ids = [];
+
     private function fillUri(string $uri): string
     {
-        return '/'.ltrim(preg_replace('/\{[^}]+\}/', '1', $uri), '/');
+        return '/'.ltrim(preg_replace_callback('/\{([^}?]+)\??\}/', fn ($m) => (string) ($this->ids[$m[1]] ?? 1), $uri), '/');
     }
 
     private function seedOneOfEach(): void
     {
         $g = Group::create(['grade' => 1, 'number' => 1]);
-        Student::factory()->for($g)->create();
-        User::factory()->admin()->create();
-        (new Kiosk(['name' => 'K']))->issueToken();
+        $student = Student::factory()->for($g)->create();
+        $user = User::factory()->admin()->create();
+        $kiosk = new Kiosk(['name' => 'K']);
+        $kiosk->issueToken();
+        $this->ids = ['group' => $g->id, 'student' => $student->id, 'user' => $user->id, 'kiosk' => $kiosk->id, 'id' => $user->id];
     }
 
     public function test_every_admin_route_rejects_teachers_and_guests(): void
