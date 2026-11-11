@@ -10,7 +10,7 @@ El sistema **no usa cookies de analítica, publicidad ni seguimiento**, ni recur
 
 | Nombre | Para qué | Duración |
 |---|---|---|
-| `marcaje_session` (o el nombre que defina `SESSION_COOKIE`) | Mantener la sesión iniciada del personal. Solo HTTPS, inaccesible para JavaScript. | Hasta cerrar sesión o al vencer la sesión ([N] minutos de inactividad) |
+| `marcaje-session` (o el nombre que defina `SESSION_COOKIE`) | Mantener la sesión iniciada del personal. Solo HTTPS, inaccesible para JavaScript. | Hasta cerrar sesión o al vencer la sesión ([N] minutos de inactividad) |
 | `XSRF-TOKEN` | Protección contra falsificación de solicitudes (CSRF). | Igual que la sesión |
 | `remember_web_*` | Solo si el usuario marca "Mantener la sesión abierta". | [N] días |
 
