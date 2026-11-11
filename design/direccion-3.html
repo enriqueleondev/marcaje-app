@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marcaje, dirección 3: Plano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* Dirección 3: Plano.
+   El aula vista desde arriba. El pase de lista es una retícula de lugares que se recorre con el
+   teclado (flechas, P, N, F), pensada para pasar lista en 30 segundos. El directivo trabaja con lista
+   e inspector: a la derecha siempre está la credencial del alumno, que es el objeto central del sistema. */
+:root, [data-theme="dark"] {
+  --bg:#08070C; --surface:#120A22; --header:#1A0B33; --line:#2A2140;
+  --text:#FAF9FC; --muted:#8C82A8; --primary:#5B2DB8; --blue:#5C78F2; --pink:#EC5C9F; --hover:#0F0B1A;
+}
+[data-theme="light"] {
+  --bg:#FAF9FC; --surface:#FFFFFF; --header:#EFEAF8; --line:#E3DEEC;
+  --text:#0E0A18; --muted:#6F6884; --primary:#3B1A78; --blue:#2342D6; --pink:#C02E74; --hover:#F4F1FA;
+}
+:root { --side:#1A0B33; --side-line:#2A2140; --side-text:#FAF9FC; --side-muted:#8C82A8;
+  --serif:"Instrument Serif", Georgia, serif; --sans:"Geist", system-ui, sans-serif; --mono:"Geist Mono", ui-monospace, monospace; --r:2px; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html, body { background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased; }
+button, input { font:inherit; color:inherit; }
+button { cursor:pointer; background:none; border:0; text-align:left; }
+:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+.mono { font-family:var(--mono); font-size:12px; }
+.muted { color:var(--muted); }
+kbd { font-family:var(--mono); font-size:11px; border:1px solid var(--line); border-bottom-width:2px; border-radius:var(--r); padding:0 5px; color:var(--text); background:var(--surface); }
+
+.deck { display:flex; align-items:center; gap:24px; padding:12px 24px; border-bottom:1px solid var(--line); background:var(--bg); position:sticky; top:0; z-index:40; flex-wrap:wrap; }
+.deck h1 { font-family:var(--serif); font-weight:400; font-size:22px; }
+.deck h1 span { color:var(--muted); }
+.tabs { display:flex; border:1px solid var(--line); border-radius:var(--r); }
+.tabs button { padding:6px 14px; font-size:13px; color:var(--muted); }
+.tabs button + button { border-left:1px solid var(--line); }
+.tabs button[aria-selected="true"] { color:var(--text); background:var(--surface); }
+.spacer { flex:1; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:34px; padding:0 14px; border:1px solid var(--line); border-radius:var(--r); font-size:13px; font-weight:500; white-space:nowrap; }
+.btn:hover { border-color:var(--muted); }
+.btn.primary { background:var(--primary); border-color:var(--primary); color:#FAF9FC; }
+.btn.danger { color:var(--pink); }
+.btn:disabled { opacity:.5; cursor:default; }
+.screen { display:none; }
+.screen.on { display:block; }
+
+.sq { display:inline-block; width:9px; height:9px; flex:none; border-radius:1px; }
+.sq.presente { background:var(--blue); }
+.sq.confirmar { border:1.5px solid var(--blue); }
+.sq.noaula { background:var(--pink); }
+.sq.falta { border:1.5px solid var(--muted); background:linear-gradient(135deg, transparent 43%, var(--muted) 43% 57%, transparent 57%); }
+
+.app { display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 59px); }
+.side { background:var(--side); color:var(--side-text); display:flex; flex-direction:column; padding:20px 0; }
+.side .brand { padding:0 20px 22px; font-family:var(--serif); font-size:26px; line-height:1; }
+.side .brand small { display:block; font-family:var(--sans); font-size:12px; color:var(--side-muted); margin-top:6px; }
+.side h4 { font-weight:400; font-family:var(--mono); font-size:11px; color:var(--side-muted); padding:16px 20px 6px; border-top:1px solid var(--side-line); }
+.side a { display:block; padding:7px 20px; color:var(--side-muted); text-decoration:none; font-size:13.5px; }
+.side a.on { color:var(--side-text); box-shadow:inset 2px 0 0 var(--pink); }
+.side .me { margin-top:auto; padding:14px 20px 0; border-top:1px solid var(--side-line); font-size:13px; }
+.side .me small { display:block; color:var(--side-muted); font-family:var(--mono); font-size:11px; }
+
+/* ── pase de lista: retícula ── */
+.room { display:grid; grid-template-columns:1fr 300px; min-height:calc(100vh - 59px); }
+.room .main { padding:28px 32px 48px; min-width:0; }
+.room h2 { font-family:var(--serif); font-weight:400; font-size:38px; line-height:1; }
+.room .sub { color:var(--muted); margin-top:6px; display:flex; gap:18px; flex-wrap:wrap; }
+.front { margin:26px 0 0; border:1px solid var(--line); border-bottom:0; padding:8px; text-align:center; font-family:var(--mono); font-size:11px; color:var(--muted); background:var(--header); }
+.seats { display:grid; grid-template-columns:repeat(6, 1fr); gap:1px; background:var(--line); border:1px solid var(--line); }
+.seat { background:var(--bg); padding:12px 12px 10px; min-height:96px; display:grid; grid-template-rows:auto 1fr auto; gap:4px; position:relative; }
+.seat:hover { background:var(--hover); }
+.seat:focus-visible { outline:2px solid var(--blue); outline-offset:-2px; z-index:1; }
+.seat .top { display:flex; justify-content:space-between; align-items:center; }
+.seat .top .mono { color:var(--muted); font-size:11px; }
+.seat b { font-family:var(--serif); font-weight:400; font-size:19px; line-height:1.05; align-self:end; }
+.seat .t { font-family:var(--mono); font-size:11.5px; color:var(--muted); }
+.seat[data-s="presente"] { background:color-mix(in srgb, var(--blue) 9%, var(--bg)); }
+.seat[data-s="noaula"] { background:color-mix(in srgb, var(--pink) 10%, var(--bg)); }
+.seat[data-s="falta"] b { color:var(--muted); }
+.seat .sq { width:11px; height:11px; }
+.panel { border-left:1px solid var(--line); background:var(--surface); padding:28px 24px; display:flex; flex-direction:column; gap:22px; }
+.panel h3 { font-family:var(--mono); font-weight:400; font-size:12px; color:var(--muted); }
+.counts { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--line); border-left:1px solid var(--line); }
+.counts div { border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:12px 12px 10px; }
+.counts b { font-family:var(--serif); font-weight:400; font-size:40px; line-height:1; display:block; }
+.counts span { display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); }
+.panel .btn.primary { width:100%; height:42px; }
+.keys { display:grid; grid-template-columns:auto 1fr; gap:8px 12px; align-items:center; font-size:13px; color:var(--muted); }
+.keys > kbd { justify-self:start; }
+.clockline { font-family:var(--mono); font-size:12px; }
+.clockline .track { height:1px; background:var(--line); margin:8px 0; position:relative; }
+.clockline .track i { position:absolute; left:0; top:-1px; height:3px; background:var(--blue); }
+.clockline div:last-child { display:flex; justify-content:space-between; color:var(--muted); }
+
+/* ── alumnos: lista + inspector ── */
+.md { display:grid; grid-template-columns:minmax(320px, 420px) 1fr; min-height:calc(100vh - 59px); }
+.list { border-right:1px solid var(--line); display:flex; flex-direction:column; min-width:0; }
+.list .hd { padding:22px 20px 14px; border-bottom:1px solid var(--line); display:grid; gap:12px; }
+.list .hd .row { display:flex; justify-content:space-between; align-items:baseline; }
+.list h2 { font-family:var(--serif); font-weight:400; font-size:34px; line-height:1; }
+.search { height:34px; border:1px solid var(--line); background:var(--surface); border-radius:var(--r); padding:0 12px; width:100%; }
+.search::placeholder { color:var(--muted); }
+.chips { display:flex; gap:4px; flex-wrap:wrap; }
+.chips button { font-family:var(--mono); font-size:12px; padding:3px 8px; border:1px solid var(--line); border-radius:var(--r); color:var(--muted); }
+.chips button[aria-pressed="true"] { color:var(--text); border-color:var(--text); }
+.items { overflow:auto; flex:1; }
+.item { width:100%; display:grid; grid-template-columns:1fr auto; gap:2px 12px; padding:12px 20px; border-bottom:1px solid var(--line); }
+.item:hover { background:var(--hover); }
+.item[aria-current="true"] { background:var(--header); box-shadow:inset 2px 0 0 var(--pink); }
+.item b { font-family:var(--serif); font-weight:400; font-size:19px; line-height:1.15; }
+.item .mono { color:var(--muted); font-size:11.5px; }
+.item .flags { display:flex; gap:5px; align-items:center; justify-content:flex-end; }
+.insp { padding:28px 40px 48px; min-width:0; }
+.insp .head { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; padding-bottom:22px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+.insp h3 { font-family:var(--serif); font-weight:400; font-size:48px; line-height:.95; }
+.insp .head p { color:var(--muted); margin-top:8px; }
+.cred { display:grid; grid-template-columns:auto 1fr; gap:32px; padding:26px 0; border-bottom:1px solid var(--line); }
+.qr { width:188px; height:188px; padding:12px; background:#FAF9FC; border-radius:var(--r); }
+.qr svg { width:100%; height:100%; display:block; }
+.fields { display:grid; grid-template-columns:140px 1fr auto; align-content:start; }
+.fields > * { padding:12px 0; border-bottom:1px solid var(--line); display:flex; align-items:center; }
+.fields > :nth-last-child(-n+3) { border-bottom:0; }
+.fields .k { font-family:var(--mono); font-size:12px; color:var(--muted); }
+.fields .v { font-family:var(--mono); font-size:15px; letter-spacing:.05em; gap:10px; }
+.fields .v.big { font-size:22px; }
+.fields .v.txt { font-family:var(--sans); font-size:14px; letter-spacing:0; }
+.fields .a { justify-content:flex-end; gap:6px; }
+.link { color:var(--muted); font-size:13px; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line); padding:4px 0; }
+.link:hover { color:var(--text); }
+.link.warn { color:var(--pink); }
+.sec { padding:22px 0; border-bottom:1px solid var(--line); }
+.sec h4 { font-family:var(--mono); font-weight:400; font-size:12px; color:var(--muted); margin-bottom:12px; display:flex; justify-content:space-between; }
+.days { display:grid; grid-template-columns:repeat(20, 1fr); gap:3px; max-width:560px; }
+.days i { aspect-ratio:1; border-radius:1px; display:block; }
+.days .p { background:var(--blue); }
+.days .n { background:var(--pink); }
+.days .f { border:1px solid var(--muted); }
+.days .x { background:var(--line); }
+.pw { display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
+.pw .tmp { font-family:var(--mono); font-size:20px; letter-spacing:.06em; padding:8px 12px; border:1px dashed var(--line); border-radius:var(--r); }
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--header); border:1px solid var(--line); padding:10px 16px; border-radius:var(--r); font-size:13px; display:none; z-index:50; }
+.toast.on { display:block; }
+
+/* ── kiosco ── */
+.kwrap { padding:32px; display:grid; place-items:center; min-height:calc(100vh - 59px); }
+.kiosk { width:min(100%, 1340px); aspect-ratio:1340/800; container-type:inline-size; background:var(--bg); border:1px solid var(--line); border-radius:var(--r); position:relative; overflow:hidden; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr auto; }
+.kgreet { padding:4cqw 4cqw 3cqw; display:flex; flex-direction:column; }
+.kgreet .org { font-size:1.3cqw; color:var(--muted); }
+.kgreet .org b { font-family:var(--serif); font-weight:400; color:var(--text); font-size:2cqw; display:block; }
+.kgreet h2 { font-family:var(--serif); font-weight:400; font-size:7.6cqw; line-height:.95; margin-top:auto; letter-spacing:-.015em; }
+.kgreet p { font-size:1.9cqw; color:var(--muted); margin-top:1.8cqw; max-width:26ch; line-height:1.3; }
+.kgreet .clk { font-family:var(--mono); font-size:1.5cqw; margin-top:3cqw; display:flex; gap:2cqw; color:var(--muted); }
+.kgreet .clk b { color:var(--text); font-weight:400; }
+.kzone { display:grid; place-items:center; border-left:1px solid var(--line); background:var(--surface); position:relative; }
+.target { width:24cqw; aspect-ratio:1; position:relative; display:grid; place-items:center; }
+.target::before, .target::after { content:""; position:absolute; inset:0; border:1px solid var(--line); border-radius:var(--r); }
+.target::after { inset:-2.4cqw; border-color:var(--line); opacity:.5; }
+.target .c { position:absolute; width:2.2cqw; height:2.2cqw; border-color:var(--blue); border-style:solid; border-width:0; }
+.target .c:nth-of-type(1) { top:-1px; left:-1px; border-top-width:3px; border-left-width:3px; }
+.target .c:nth-of-type(2) { top:-1px; right:-1px; border-top-width:3px; border-right-width:3px; }
+.target .c:nth-of-type(3) { bottom:-1px; left:-1px; border-bottom-width:3px; border-left-width:3px; }
+.target .c:nth-of-type(4) { bottom:-1px; right:-1px; border-bottom-width:3px; border-right-width:3px; }
+.target span { font-family:var(--mono); font-size:1.2cqw; color:var(--muted); text-align:center; line-height:1.6; }
+.kzone .hint { position:absolute; bottom:2.4cqw; font-family:var(--mono); font-size:1.05cqw; color:var(--muted); display:flex; gap:2cqw; }
+.kzone .hint .sq { width:.7cqw; height:.7cqw; margin-right:.5cqw; }
+.kstrip { grid-column:1/-1; display:grid; grid-template-columns:repeat(5, 1fr); border-top:1px solid var(--line); }
+.kstrip div { padding:1.4cqw 2cqw; display:grid; gap:.3cqw; }
+.kstrip div + div { border-left:1px solid var(--line); }
+.kstrip b { font-family:var(--serif); font-weight:400; font-size:1.8cqw; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kstrip span { font-family:var(--mono); font-size:1.05cqw; color:var(--muted); }
+.kstrip div:first-child b { color:var(--text); }
+.kstrip div:first-child span:first-of-type { color:var(--blue); }
+.flash { position:absolute; inset:0; z-index:5; background:var(--bg); display:none; grid-template-columns:auto 1fr; gap:4cqw; padding:5cqw; align-items:center; }
+.flash.on { display:grid; }
+.flash .mono-g { width:30cqw; aspect-ratio:1; background:var(--primary); color:#FAF9FC; border-radius:var(--r); display:grid; place-items:center; font-family:var(--serif); font-size:14cqw; line-height:1; animation:pop .35s cubic-bezier(.2,.9,.3,1.2); }
+.flash.dup .mono-g { background:var(--header); color:var(--pink); border:1px solid var(--pink); }
+@keyframes pop { from { transform:scale(.92); opacity:.4; } }
+.flash .k { font-family:var(--mono); font-size:1.5cqw; color:var(--blue); display:flex; gap:1cqw; align-items:center; }
+.flash.dup .k { color:var(--pink); }
+.flash .k i { width:1.2cqw; height:1.2cqw; background:currentColor; border-radius:1px; }
+.flash .nm { font-family:var(--serif); font-size:7cqw; line-height:.95; margin:1.6cqw 0 3cqw; }
+.flash dl { display:grid; grid-template-columns:repeat(3, auto); justify-content:start; gap:.4cqw 5cqw; border-top:1px solid var(--line); padding-top:2cqw; }
+.flash dt { font-family:var(--mono); font-size:1.1cqw; color:var(--muted); grid-row:1; }
+.flash dd { font-family:var(--serif); font-size:3cqw; grid-row:2; }
+.khelp { margin-top:16px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center; text-align:center; }
+
+@media (max-width:1000px) {
+  .app { grid-template-columns:1fr; } .side { display:none; }
+  .room { grid-template-columns:1fr; } .panel { border-left:0; border-top:1px solid var(--line); }
+  .room .main { padding:20px 16px; } .seats { grid-template-columns:repeat(3, 1fr); }
+  .md { grid-template-columns:1fr; } .items { max-height:320px; }
+  .insp { padding:20px 16px 48px; } .cred { grid-template-columns:1fr; } .fields { grid-template-columns:110px 1fr; } .fields .a { grid-column:1/-1; justify-content:flex-start; border-bottom:1px solid var(--line); }
+  .days { grid-template-columns:repeat(10, 1fr); } .kwrap { padding:16px; }
+}
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; } }
+</style>
+</head>
+<body>
+
+<header class="deck">
+  <h1>Marcaje <span>Dirección 3, plano</span></h1>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-s="kiosco">Kiosco</button>
+    <button role="tab" aria-selected="false" data-s="lista">Pase de lista</button>
+    <button role="tab" aria-selected="false" data-s="alumnos">Alumnos</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="theme">Tema claro</button>
+</header>
+
+<!-- ═════════ KIOSCO ═════════ -->
+<section class="screen on" id="kiosco">
+  <div class="kwrap"><div>
+    <div class="kiosk">
+      <div class="kgreet">
+        <div class="org"><b>Plantel Demo</b>Kiosco 1, acceso principal</div>
+        <h2 id="greet">Buenos días.</h2>
+        <p>Pasa tu credencial por el lector o muestra tu código QR.</p>
+        <div class="clk"><b id="clock">07:42</b><span id="kdate">viernes 7 de noviembre</span></div>
+      </div>
+      <div class="kzone">
+        <div class="target"><i class="c"></i><i class="c"></i><i class="c"></i><i class="c"></i><span>Lector NFC<br>y QR</span></div>
+        <div class="hint"><span><i class="sq presente"></i>En línea</span><span id="kq">Sin entradas en cola</span><span id="kcount">186 entradas hoy</span></div>
+      </div>
+      <div class="kstrip" id="strip"></div>
+      <div class="flash" id="flash" aria-live="assertive">
+        <div class="mono-g" id="fi">XO</div>
+        <div>
+          <div class="k"><i></i><span id="fk">Entrada registrada</span></div>
+          <div class="nm" id="fn"></div>
+          <dl><dt>Grado y grupo</dt><dd id="fg"></dd><dt>Hora</dt><dd id="ft"></dd><dt>Método</dt><dd id="fm"></dd></dl>
+        </div>
+      </div>
+    </div>
+    <p class="khelp mono">Prueba: escribe cualquier código y pulsa Enter. Repite el mismo para ver el anti-duplicado.
+      <button class="btn" id="sim">Simular lectura</button></p>
+  </div></div>
+</section>
+
+<!-- ═════════ PASE DE LISTA ═════════ -->
+<section class="screen" id="lista">
+  <div class="app">
+    <aside class="side">
+      <div class="brand">Marcaje<small>Plantel Demo</small></div>
+      <h4>Hoy</h4>
+      <a href="#" class="on">Biología I, 1.º 3</a>
+      <a href="#">Biología I, 1.º 1</a>
+      <a href="#">Ecología, 3.º 2</a>
+      <h4>Docente</h4>
+      <a href="#">Mis alumnos</a>
+      <a href="#">Historial</a>
+      <div class="me">Ricardo Ibarra Luna<small>Docente</small></div>
+    </aside>
+    <div class="room">
+      <main class="main">
+        <h2>Biología I, 1.º grado, grupo 3</h2>
+        <div class="sub"><span>Viernes 7 de noviembre</span><span class="mono">09:30 a 10:20</span><span>Laboratorio 2</span></div>
+        <div class="front">Pizarrón</div>
+        <div class="seats" id="seats" role="grid" aria-label="Lugares del aula"></div>
+      </main>
+      <aside class="panel">
+        <div class="clockline"><div>Lista abierta</div><div class="track"><i style="width:42%"></i></div><div><span>09:30</span><span>Cierra 10:20</span></div></div>
+        <div><h3 style="margin-bottom:10px">Resumen</h3><div class="counts" id="counts"></div></div>
+        <button class="btn primary" id="confirmAll">Confirmar todas las entradas</button>
+        <div><h3 style="margin-bottom:10px">Teclado</h3>
+          <div class="keys"><span><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></span><span>Moverse entre lugares</span>
+          <kbd>P</kbd><span>Presente</span><kbd>N</kbd><span>No en aula</span><kbd>F</kbd><span>Falta</span><kbd>C</kbd><span>Confirmar todas</span></div></div>
+        <p class="mono muted" style="margin-top:auto">Los cambios se guardan al momento. Después de las 10:20 la lista queda cerrada.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ ALUMNOS (DIRECTIVO) ═════════ -->
+<section class="screen" id="alumnos">
+  <div class="app">
+    <aside class="side">
+      <div class="brand">Marcaje<small>Plantel Demo</small></div>
+      <h4>Escuela</h4>
+      <a href="#" class="on">Alumnos</a><a href="#">Docentes</a><a href="#">Grupos</a>
+      <h4>Asistencia</h4>
+      <a href="#">Credenciales</a><a href="#">Kioscos</a><a href="#">Reportes</a>
+      <div class="me">Gabriela Solís<small>Dirección</small></div>
+    </aside>
+    <div class="md">
+      <div class="list">
+        <div class="hd">
+          <div class="row"><h2>Alumnos</h2><span style="display:flex;gap:6px"><button class="btn">Importar CSV</button><button class="btn primary">Agregar</button></span></div>
+          <input class="search" placeholder="Buscar por nombre, matrícula o código">
+          <div class="chips" id="chips"><button aria-pressed="true">Todos</button><button aria-pressed="false">1.º</button><button aria-pressed="false">2.º</button><button aria-pressed="false">3.º</button><button aria-pressed="false">Sin NFC</button><button aria-pressed="false">Contraseña temporal</button></div>
+        </div>
+        <div class="items" id="items"></div>
+      </div>
+      <div class="insp" id="insp"></div>
+    </div>
+  </div>
+</section>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+let seed = 23; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const AB = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const code = () => { let c = ""; for (let i = 0; i < 8; i++) c += AB[Math.floor(rnd()*AB.length)]; return c.slice(0,4) + "-" + c.slice(4); };
+const uid = () => Array.from({length:7}, () => Math.floor(rnd()*256).toString(16).padStart(2,"0").toUpperCase()).join(":");
+const pad = n => String(n).padStart(2,"0");
+const NAMES = [["Ximena","Ortega Ruiz"],["Diego","Hernández Soto"],["Valeria","Campos Méndez"],["Emiliano","Reyes Aguilar"],["Renata","Vázquez Lara"],["Santiago","Morales Peña"],["Camila","Domínguez Rosas"],["Mateo","Guerrero Salinas"],["Regina","Fuentes Ibarra"],["Leonardo","Castro Núñez"],["Natalia","Ríos Escobar"],["Sebastián","Juárez Mora"],["Fernanda","Delgado Cruz"],["Iker","Navarro Bautista"],["Sofía","Cabrera Medina"],["Joaquín","Herrera Pacheco"],["María José","Luna Treviño"],["Alejandro","Sandoval Ochoa"],["Daniela","Montes Villalobos"],["Rodrigo","Estrada Cortés"],["Andrea","Salazar Ponce"],["Bruno","Mendoza Galván"],["Paula","Cervantes Ortiz"],["Gael","Espinoza Robles"]];
+const students = NAMES.map(([n, ap], i) => { const has = rnd() > .1, m = 6*60 + 45 + Math.floor(rnd()*40);
+  return { i, n, ap, code:code(), uid: rnd() > .18 ? uid() : null, entry: has ? pad(Math.floor(m/60)) + ":" + pad(m%60) : null, method: rnd() > .4 ? "NFC" : "QR",
+    state: has ? (i === 9 ? "noaula" : "confirmar") : "falta", tmp: i % 5 === 2, g: 1 + i % 3, gr: 1 + i % 4, mat: "2025" + (2100 + i*29),
+    days: Array.from({length:20}, () => { const r = rnd(); return r > .93 ? "f" : r > .88 ? "n" : "p"; }) }; });
+const LABEL = { presente:"Presente", confirmar:"Por confirmar", noaula:"No en aula", falta:"Falta" };
+
+const show = id => { $$(".tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.s === id));
+  $$(".screen").forEach(s => s.classList.toggle("on", s.id === id)); history.replaceState(null, "", "#" + id); };
+$$(".tabs button").forEach(b => b.onclick = () => show(b.dataset.s));
+if (location.hash.includes("-light")) document.documentElement.dataset.theme = "light";
+if (location.hash.length > 1) { show(location.hash.slice(1).split("-")[0]); addEventListener("load", () => setTimeout(() => scrollTo(0, 0))); }
+const syncTheme = () => $("#theme").textContent = document.documentElement.dataset.theme === "dark" ? "Tema claro" : "Tema oscuro";
+syncTheme(); $("#theme").onclick = () => { const d = document.documentElement; d.dataset.theme = d.dataset.theme === "dark" ? "light" : "dark"; syncTheme(); };
+const toast = msg => { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("on"), 2200); };
+
+/* pase de lista: retícula */
+let focusIdx = 0;
+function renderSeats() {
+  const c = { presente:0, confirmar:0, noaula:0, falta:0 }; students.forEach(s => c[s.state]++);
+  $("#counts").innerHTML = Object.keys(c).map(k => `<div><b>${c[k]}</b><span><i class="sq ${k}"></i>${LABEL[k]}</span></div>`).join("");
+  $("#confirmAll").textContent = c.confirmar ? `Confirmar todas las entradas (${c.confirmar})` : "Entradas confirmadas"; $("#confirmAll").disabled = !c.confirmar;
+  $("#seats").innerHTML = students.map((s, k) => `<button class="seat" role="gridcell" data-k="${k}" data-s="${s.state}" tabindex="${k === focusIdx ? 0 : -1}" aria-label="${s.n} ${s.ap}, ${LABEL[s.state]}">
+    <span class="top"><span class="mono">${pad(k+1)}</span><i class="sq ${s.state}"></i></span>
+    <b>${s.n}<br>${s.ap.split(" ")[0]}</b>
+    <span class="t">${s.entry ? s.entry + " " + s.method : "Sin entrada"}</span></button>`).join("");
+}
+function setState(k, v) { const s = students[k]; if (v === "noaula" && !s.entry) return toast("Sin entrada registrada: no puede marcarse como no en aula.");
+  s.state = s.state === v ? (s.entry ? "confirmar" : "falta") : v; renderSeats(); $(`.seat[data-k="${k}"]`).focus(); }
+const confirmAll = () => { students.forEach(s => s.state === "confirmar" && (s.state = "presente")); renderSeats(); toast("Entradas confirmadas."); };
+$("#confirmAll").onclick = confirmAll;
+$("#seats").onclick = e => { const b = e.target.closest(".seat"); if (!b) return; focusIdx = +b.dataset.k; const s = students[focusIdx];
+  setState(focusIdx, s.state === "presente" ? (s.entry ? "noaula" : "falta") : s.state === "noaula" ? "falta" : "presente"); };
+$("#seats").onkeydown = e => { const b = e.target.closest(".seat"); if (!b) return; const k = +b.dataset.k, cols = getComputedStyle($("#seats")).gridTemplateColumns.split(" ").length;
+  const mv = { ArrowRight:1, ArrowLeft:-1, ArrowDown:cols, ArrowUp:-cols }[e.key];
+  if (mv !== undefined) { e.preventDefault(); focusIdx = Math.max(0, Math.min(students.length - 1, k + mv)); renderSeats(); $(`.seat[data-k="${focusIdx}"]`).focus(); return; }
+  const v = { p:"presente", n:"noaula", f:"falta" }[e.key.toLowerCase()]; if (v) { e.preventDefault(); focusIdx = k; setState(k, v); }
+  if (e.key.toLowerCase() === "c") { e.preventDefault(); confirmAll(); $(`.seat[data-k="${k}"]`).focus(); } };
+renderSeats();
+
+/* alumnos: lista + inspector */
+function qrSvg(text) { // patrón ilustrativo, no es un QR real
+  let h = [...text].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7); const r = () => (h = (h * 1103515245 + 12345) >>> 0) / 4294967296;
+  const N = 25, cells = []; const finder = (x, y) => { for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) { const e = i === 0 || i === 6 || j === 0 || j === 6, c = i >= 2 && i <= 4 && j >= 2 && j <= 4; if (e || c) cells.push([x+i, y+j]); } };
+  const inF = (x, y) => (x < 8 && y < 8) || (x > N-9 && y < 8) || (x < 8 && y > N-9);
+  for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if (!inF(x, y) && r() > .52) cells.push([x, y]);
+  finder(0, 0); finder(N-7, 0); finder(0, N-7);
+  return `<svg viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges" role="img" aria-label="Código QR ${text}">${cells.map(([x, y]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="#0E0A18"/>`).join("")}</svg>`; }
+let cur = 0;
+function renderItems() { $("#items").innerHTML = students.map((s, k) => `<button class="item" data-k="${k}" aria-current="${k === cur}">
+  <b>${s.ap}, ${s.n}</b><span class="flags">${s.tmp ? '<i class="sq noaula" title="Contraseña temporal"></i>' : ""}<i class="sq ${s.uid ? "presente" : "confirmar"}" title="${s.uid ? "NFC vinculado" : "Sin NFC"}"></i></span>
+  <span class="mono">${s.g}.º ${s.gr}, ${s.mat}</span><span class="mono">${s.code}</span></button>`).join(""); }
+function renderInsp() { const s = students[cur];
+  const pres = s.days.filter(d => d === "p").length;
+  $("#insp").innerHTML = `
+  <div class="head"><div><h3>${s.n}<br>${s.ap}</h3><p>${s.g}.º grado, grupo ${s.gr}. Matrícula ${s.mat}.</p></div>
+    <div style="display:flex;gap:8px"><button class="btn">Editar datos</button><button class="btn danger">Dar de baja</button></div></div>
+  <div class="cred">
+    <div class="qr">${qrSvg(s.code)}</div>
+    <div class="fields">
+      <span class="k">Código QR</span><span class="v big">${s.code}</span><span class="a"><button class="link" data-act="regen">Regenerar</button></span>
+      <span class="k">NFC</span><span class="v">${s.uid ? `<i class="sq presente"></i>${s.uid}` : `<i class="sq confirmar"></i><span class="muted" style="letter-spacing:0">Sin vincular</span>`}</span>
+        <span class="a"><button class="link" data-act="nfc">${s.uid ? "Reemplazar" : "Vincular"}</button></span>
+      <span class="k">Estado</span><span class="v txt">Credencial activa desde el 12 de agosto</span><span class="a"><button class="link warn" data-act="revoke">Revocar</button></span>
+    </div>
+  </div>
+  <div class="sec"><h4><span>Acceso a la cuenta</span><span>${s.tmp ? "Contraseña temporal pendiente" : "Contraseña definitiva"}</span></h4>
+    <div class="pw">${s.tmp ? `<span class="tmp">mrc-4821-vela</span><span class="muted">Vence en 18 h. El alumno debe cambiarla al entrar.</span>` : `<span class="muted">El alumno ya eligió su contraseña.</span>`}
+      <button class="btn" data-act="tmp">Generar contraseña temporal</button></div></div>
+  <div class="sec"><h4><span>Últimos 20 días de clase</span><span>${pres} de 20 con asistencia</span></h4>
+    <div class="days">${s.days.map(d => `<i class="${d}"></i>`).join("")}</div></div>`; }
+$("#items").onclick = e => { const b = e.target.closest(".item"); if (!b) return; cur = +b.dataset.k; renderItems(); renderInsp(); };
+$("#insp").onclick = e => { const a = e.target.closest("[data-act]")?.dataset.act; if (!a) return; const s = students[cur];
+  if (a === "regen") { s.code = code(); renderInsp(); renderItems(); toast("Código regenerado. El anterior ya no funciona."); }
+  if (a === "nfc") toast("Pasa la pegatina NFC por el lector ahora.");
+  if (a === "revoke") toast("Para revocar la credencial se pedirá confirmación.");
+  if (a === "tmp") { s.tmp = true; renderInsp(); renderItems(); toast("Contraseña temporal generada. Vence en 24 h."); } };
+$("#chips").onclick = e => { const b = e.target.closest("button"); if (!b) return; $$("#chips button").forEach(x => x.setAttribute("aria-pressed", x === b)); };
+renderItems(); renderInsp();
+
+/* kiosco */
+const days = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"], months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+function tick() { const d = new Date(), h = d.getHours();
+  $("#clock").textContent = pad(h) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  $("#kdate").textContent = `${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]}`;
+  $("#greet").textContent = h >= 5 && h < 12 ? "Buenos días." : h >= 12 && h < 19 ? "Buenas tardes." : "Buenas noches."; }
+tick(); setInterval(tick, 1000);
+const feed = students.filter(s => s.entry).sort((a, b) => b.entry.localeCompare(a.entry)).slice(0, 5).map(s => ({ s, time: s.entry + ":" + pad(Math.floor(rnd()*60)), m: s.method }));
+const renderStrip = () => $("#strip").innerHTML = feed.slice(0, 5).map(f => `<div><span>${f.time}</span><b>${f.s.n} ${f.s.ap.split(" ")[0]}</b><span>${f.s.g}.º ${f.s.gr}, ${f.m}</span></div>`).join("");
+renderStrip();
+let ac; function beep(ok) { try { ac ??= new AudioContext(); const o = ac.createOscillator(), g = ac.createGain();
+  o.frequency.value = ok ? 1046 : 262; g.gain.setValueAtTime(.16, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + .3);
+  o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + .35); } catch (e) {} }
+const seen = new Map(); let count = 186, hide;
+function scan(raw) {
+  const key = raw.trim().toUpperCase(); if (!key) return;
+  const s = students.find(x => x.code.replace("-","") === key.replace("-","") || x.uid === key) ?? students[[...key].reduce((a,c) => a + c.charCodeAt(0), 0) % students.length];
+  const d = new Date(), now = d.getTime(), f = $("#flash"), method = /^[0-9A-F:]{14,}$/.test(key) ? "NFC" : "QR";
+  f.className = "flash"; void f.offsetWidth; f.className = "flash on";
+  $("#fi").textContent = s.n[0] + s.ap[0]; $("#fn").textContent = `${s.n} ${s.ap}`; $("#fg").textContent = `${s.g}.º ${s.gr}`; $("#fm").textContent = method;
+  const last = seen.get(s.i);
+  if (last && now - last < 300000) { f.classList.add("dup"); $("#fk").textContent = "Tu entrada ya estaba registrada"; const l = new Date(last); $("#ft").textContent = pad(l.getHours()) + ":" + pad(l.getMinutes()); beep(false); }
+  else { seen.set(s.i, now); $("#fk").textContent = "Entrada registrada"; const tm = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); $("#ft").textContent = tm.slice(0,5);
+    feed.unshift({ s, time: tm, m: method }); count++; $("#kcount").textContent = count + " entradas hoy"; renderStrip(); beep(true); }
+  clearTimeout(hide); hide = setTimeout(() => f.className = "flash", 1500);
+}
+let buf = "";
+document.addEventListener("keydown", e => { if (!$("#kiosco").classList.contains("on") || e.target.matches("input")) return;
+  if (e.key === "Enter") { scan(buf); buf = ""; } else if (e.key.length === 1) buf += e.key; });
+$("#sim").onclick = () => scan(students[Math.floor(Math.random()*students.length)].code);
+</script>
+</body>
+</html>

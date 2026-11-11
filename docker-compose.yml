@@ -1,0 +1,25 @@
+# MySQL para el entorno local "igual a producción" (Hostinger usa MySQL/MariaDB).
+# Puerto 3307 para no chocar con un MySQL instalado en la máquina.
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: marcaje-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: marcaje
+      MYSQL_USER: marcaje
+      MYSQL_PASSWORD: marcaje-local
+      MYSQL_ROOT_PASSWORD: marcaje-root-local
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - marcaje-mysql:/var/lib/mysql
+      - ./scripts/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-umarcaje", "-pmarcaje-local"]
+      interval: 3s
+      retries: 30
+
+volumes:
+  marcaje-mysql:

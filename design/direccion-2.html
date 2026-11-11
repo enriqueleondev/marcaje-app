@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marcaje, dirección 2: Umbral</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* Dirección 2: Umbral.
+   Lo importante es cuándo cruzó cada alumno la puerta. Todo se ordena sobre un eje de tiempo:
+   el kiosco dibuja la mañana entrada por entrada, el pase de lista ubica a cada alumno respecto
+   al inicio de la clase y el directivo navega la escuela como una matriz de grados y grupos. */
+:root, [data-theme="dark"] {
+  --bg:#08070C; --surface:#120A22; --header:#1A0B33; --line:#2A2140;
+  --text:#FAF9FC; --muted:#8C82A8; --primary:#5B2DB8; --blue:#5C78F2; --pink:#EC5C9F; --hover:#0F0B1A;
+}
+[data-theme="light"] {
+  --bg:#FAF9FC; --surface:#FFFFFF; --header:#EFEAF8; --line:#E3DEEC;
+  --text:#0E0A18; --muted:#6F6884; --primary:#3B1A78; --blue:#2342D6; --pink:#C02E74; --hover:#F4F1FA;
+}
+:root { --side:#1A0B33; --side-line:#2A2140; --side-text:#FAF9FC; --side-muted:#8C82A8;
+  --serif:"Instrument Serif", Georgia, serif; --sans:"Geist", system-ui, sans-serif; --mono:"Geist Mono", ui-monospace, monospace; --r:2px; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html, body { background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased; }
+button, input { font:inherit; color:inherit; }
+button { cursor:pointer; background:none; border:0; }
+:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+.mono { font-family:var(--mono); font-size:12px; }
+.muted { color:var(--muted); }
+
+.deck { display:flex; align-items:center; gap:24px; padding:12px 24px; border-bottom:1px solid var(--line); background:var(--bg); position:sticky; top:0; z-index:40; flex-wrap:wrap; }
+.deck h1 { font-family:var(--serif); font-weight:400; font-size:22px; }
+.deck h1 span { color:var(--muted); }
+.tabs { display:flex; border:1px solid var(--line); border-radius:var(--r); }
+.tabs button { padding:6px 14px; font-size:13px; color:var(--muted); }
+.tabs button + button { border-left:1px solid var(--line); }
+.tabs button[aria-selected="true"] { color:var(--text); background:var(--surface); }
+.spacer { flex:1; }
+.btn { display:inline-flex; align-items:center; gap:8px; height:34px; padding:0 14px; border:1px solid var(--line); border-radius:var(--r); font-size:13px; font-weight:500; white-space:nowrap; background:var(--surface); }
+.btn:hover { border-color:var(--muted); }
+.btn.primary { background:var(--primary); border-color:var(--primary); color:#FAF9FC; }
+.btn:disabled { opacity:.5; cursor:default; }
+.screen { display:none; }
+.screen.on { display:block; }
+
+.sq { display:inline-block; width:9px; height:9px; flex:none; border-radius:1px; }
+.sq.presente { background:var(--blue); }
+.sq.confirmar { border:1.5px solid var(--blue); }
+.sq.noaula { background:var(--pink); }
+.sq.falta { border:1.5px solid var(--muted); background:linear-gradient(135deg, transparent 43%, var(--muted) 43% 57%, transparent 57%); }
+
+.app { display:grid; grid-template-columns:72px 1fr; min-height:calc(100vh - 59px); }
+/* barra lateral angosta: solo iniciales, la jerarquía la lleva el contenido */
+.side { background:var(--side); color:var(--side-text); display:flex; flex-direction:column; align-items:center; padding:18px 0; gap:6px; }
+.side .mark { font-family:var(--serif); font-size:30px; line-height:1; margin-bottom:18px; }
+.side a { width:44px; height:40px; display:grid; place-items:center; color:var(--side-muted); text-decoration:none; font-size:11px; border-radius:var(--r); position:relative; }
+.side a.on { color:var(--side-text); background:rgba(255,255,255,.06); }
+.side a.on::before { content:""; position:absolute; left:-14px; top:12px; width:2px; height:16px; background:var(--pink); }
+.side a span { font-family:var(--mono); }
+.side .me { margin-top:auto; width:36px; height:36px; border:1px solid var(--side-line); border-radius:var(--r); display:grid; place-items:center; font-family:var(--serif); font-size:16px; }
+
+.main { min-width:0; }
+.top { display:flex; justify-content:space-between; align-items:center; padding:0 36px; height:52px; border-bottom:1px solid var(--line); background:var(--header); gap:16px; }
+.top .mono { color:var(--muted); }
+.body { padding:28px 36px 56px; }
+.ttl { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap; }
+.ttl h2 { font-family:var(--serif); font-weight:400; font-size:40px; line-height:1; }
+.ttl p { color:var(--muted); margin-top:8px; max-width:62ch; }
+
+/* ── pase de lista: eje de tiempo ── */
+.split { display:flex; height:6px; margin:26px 0 10px; gap:2px; }
+.split i { display:block; height:100%; }
+.legend { display:flex; gap:24px; flex-wrap:wrap; padding-bottom:22px; border-bottom:1px solid var(--line); }
+.legend span { display:flex; align-items:center; gap:8px; }
+.legend b { font-family:var(--serif); font-weight:400; font-size:26px; line-height:1; }
+.rl { --cols: minmax(220px, 1.2fr) minmax(280px, 2fr) 78px 78px 78px; }
+.rl .h, .rl .r { display:grid; grid-template-columns:var(--cols); align-items:center; column-gap:20px; }
+.rl .h { padding:14px 0 10px; border-bottom:1px solid var(--line); }
+.rl .h .c { text-align:center; font-family:var(--mono); font-size:11.5px; color:var(--muted); }
+.axis { position:relative; height:16px; font-family:var(--mono); font-size:11px; color:var(--muted); }
+.axis span { position:absolute; transform:translateX(-50%); top:0; }
+.rl .r { min-height:50px; border-bottom:1px solid var(--line); }
+.rl .r:hover { background:var(--hover); }
+.who b { font-family:var(--serif); font-weight:400; font-size:19px; display:block; line-height:1.15; }
+.who small { color:var(--muted); font-size:12px; }
+.lane { position:relative; height:50px; }
+.lane::before { content:""; position:absolute; left:0; right:0; top:50%; border-top:1px dotted var(--line); }
+.lane .start { position:absolute; top:0; bottom:0; border-left:1px solid var(--text); opacity:.5; }
+.lane .dot { position:absolute; top:50%; transform:translate(-50%,-50%); display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.lane .dot .sq { width:11px; height:11px; }
+.lane .dot .mono { color:var(--text); background:var(--bg); padding:0 4px; }
+.lane .dot.late .mono { color:var(--pink); }
+.lane .none { position:absolute; left:0; top:50%; transform:translateY(-50%); color:var(--muted); font-size:12px; background:var(--bg); padding-right:6px; font-family:var(--mono); }
+.rl .r:hover .lane .dot .mono, .rl .r:hover .lane .none { background:var(--hover); }
+.box { justify-self:center; width:22px; height:22px; border:1px solid var(--line); border-radius:var(--r); display:grid; place-items:center; background:var(--surface); }
+.box:hover { border-color:var(--muted); }
+.box[aria-checked="true"] i { width:12px; height:12px; display:block; border-radius:1px; }
+.box[data-v="presente"][aria-checked="true"] i { background:var(--blue); }
+.box[data-v="noaula"][aria-checked="true"] i { background:var(--pink); }
+.box[data-v="falta"][aria-checked="true"] i { background:var(--muted); }
+.box:disabled { opacity:.35; cursor:not-allowed; }
+.lock { display:flex; align-items:center; gap:10px; }
+.lock .ring { width:120px; height:1px; background:var(--line); position:relative; }
+.lock .ring i { position:absolute; left:0; top:-1px; height:3px; background:var(--blue); }
+
+/* ── matriz de grados y grupos ── */
+.matrix { display:grid; grid-template-columns:90px repeat(4, 1fr); margin-top:28px; border-top:1px solid var(--line); border-left:1px solid var(--line); }
+.matrix > * { border-right:1px solid var(--line); border-bottom:1px solid var(--line); }
+.matrix .hd { padding:10px 14px; font-family:var(--mono); font-size:12px; color:var(--muted); background:var(--header); }
+.cell { padding:14px 16px 12px; text-align:left; display:grid; gap:10px; background:var(--surface); position:relative; }
+.cell:hover { background:var(--hover); }
+.cell[aria-pressed="true"] { box-shadow:inset 0 0 0 2px var(--primary); }
+.cell .n { font-family:var(--serif); font-size:34px; line-height:.9; }
+.cell .n small { font-family:var(--sans); font-size:12px; color:var(--muted); margin-left:6px; }
+.meter { display:flex; gap:2px; height:4px; }
+.meter i { flex:1; background:var(--line); }
+.meter i.on { background:var(--blue); }
+.cell .mono { color:var(--muted); font-size:11.5px; display:flex; justify-content:space-between; }
+.cell .alert { color:var(--pink); }
+.tools { display:flex; justify-content:space-between; gap:16px; padding:24px 0 12px; align-items:end; flex-wrap:wrap; }
+.tools h3 { font-family:var(--serif); font-weight:400; font-size:28px; }
+.search { height:34px; border:1px solid var(--line); background:var(--surface); border-radius:var(--r); padding:0 12px; width:280px; }
+.search::placeholder { color:var(--muted); }
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; font-weight:400; font-family:var(--mono); font-size:12px; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--line); border-top:1px solid var(--line); }
+td { padding:0 12px; height:50px; border-bottom:1px solid var(--line); }
+tbody tr:hover { background:var(--hover); }
+td.nm { font-family:var(--serif); font-size:19px; }
+td.code { font-family:var(--mono); font-size:13px; letter-spacing:.04em; }
+td .none { color:var(--muted); letter-spacing:0; }
+.link { color:var(--muted); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line); font-size:13px; }
+.link:hover { color:var(--text); }
+.link + .link { margin-left:14px; }
+
+/* ── kiosco ── */
+.kwrap { padding:32px; display:grid; place-items:center; min-height:calc(100vh - 59px); }
+.kiosk { width:min(100%, 1340px); aspect-ratio:1340/800; container-type:inline-size; background:var(--bg); border:1px solid var(--line); border-radius:var(--r); position:relative; overflow:hidden; display:grid; grid-template-rows:auto 1fr auto; }
+.kbar { display:flex; justify-content:space-between; align-items:center; padding:2cqw 3.6cqw; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:1.15cqw; color:var(--muted); }
+.kbar b { font-family:var(--serif); font-weight:400; font-size:2cqw; color:var(--text); }
+.kbar .st { display:flex; gap:2.4cqw; align-items:center; }
+.kbar .sq { width:.75cqw; height:.75cqw; margin-right:.6cqw; }
+.kmid { padding:0 3.6cqw; display:grid; grid-template-columns:1.5fr 1fr; align-items:center; gap:4cqw; }
+.kmid h2 { font-family:var(--serif); font-weight:400; font-size:8.4cqw; line-height:.92; letter-spacing:-.02em; }
+.kmid p { font-size:1.9cqw; color:var(--muted); margin-top:2cqw; max-width:28ch; }
+.know { border-left:1px solid var(--line); padding-left:3cqw; }
+.know .t { font-family:var(--mono); font-size:6cqw; line-height:1; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
+.know .d { font-size:1.4cqw; color:var(--muted); margin-top:1cqw; }
+.know .c { margin-top:3cqw; font-family:var(--serif); font-size:4.2cqw; line-height:1; }
+.know .c small { display:block; font-family:var(--sans); font-size:1.3cqw; color:var(--muted); margin-top:.6cqw; }
+.ktl { padding:2.2cqw 3.6cqw 2.4cqw; border-top:1px solid var(--line); background:var(--surface); }
+.plot { position:relative; height:9cqw; border-bottom:1px solid var(--line); }
+.plot i { position:absolute; width:.9cqw; height:.9cqw; background:var(--blue); border-radius:1px; transform:translateX(-50%); }
+.plot i.fresh { background:var(--pink); }
+.plot .now { position:absolute; top:-.8cqw; bottom:-.2cqw; border-left:1px solid var(--pink); }
+.plot .now span { position:absolute; left:.6cqw; top:0; font-family:var(--mono); font-size:1cqw; color:var(--pink); white-space:nowrap; }
+.kaxis { position:relative; height:2cqw; font-family:var(--mono); font-size:1.05cqw; color:var(--muted); margin-top:.6cqw; }
+.kaxis span { position:absolute; transform:translateX(-50%); }
+/* retroalimentación: la puerta se abre de izquierda a derecha */
+.flash { position:absolute; inset:0; z-index:5; display:grid; grid-template-columns:1fr; background:var(--primary); color:#FAF9FC; padding:3.6cqw; clip-path:inset(0 100% 0 0); pointer-events:none; }
+.flash.on { animation:door 1.5s cubic-bezier(.2,.7,.2,1) forwards; }
+.flash.dup { background:var(--header); color:var(--text); }
+@keyframes door { 0% { clip-path:inset(0 100% 0 0); } 18% { clip-path:inset(0 0 0 0); } 88% { clip-path:inset(0 0 0 0); } 100% { clip-path:inset(0 0 0 100%); } }
+.flash .grid { display:grid; grid-template-rows:auto 1fr auto; height:100%; }
+.flash .k { font-family:var(--mono); font-size:1.4cqw; display:flex; gap:1cqw; align-items:center; opacity:.85; }
+.flash .k i { width:1.2cqw; height:1.2cqw; background:currentColor; display:block; border-radius:1px; }
+.flash.dup .k i { background:var(--pink); }
+.flash .nm { align-self:center; font-family:var(--serif); font-size:11cqw; line-height:.9; letter-spacing:-.02em; }
+.flash .nm small { display:block; font-size:4cqw; opacity:.7; letter-spacing:0; margin-top:1.4cqw; }
+.flash .meta { display:flex; gap:6cqw; border-top:1px solid currentColor; padding-top:1.8cqw; font-family:var(--mono); font-size:2.6cqw; }
+.flash .meta span { opacity:.6; font-size:1.1cqw; display:block; margin-bottom:.4cqw; }
+.khelp { margin-top:16px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center; text-align:center; }
+
+@media (max-width:900px) {
+  .app { grid-template-columns:1fr; } .side { display:none; }
+  .body { padding:20px 16px 48px; } .top { padding:0 16px; }
+  .rl { overflow-x:auto; } .rl > * { min-width:760px; }
+  .matrix { grid-template-columns:52px repeat(4, minmax(64px, 1fr)); }
+  .cell { padding:10px; } .cell .mono { display:none; }
+  .tablewrap { overflow-x:auto; } .kwrap { padding:16px; }
+}
+@media (prefers-reduced-motion:reduce) { .flash.on { animation:none; clip-path:none; } }
+</style>
+</head>
+<body>
+
+<header class="deck">
+  <h1>Marcaje <span>Dirección 2, umbral</span></h1>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-s="kiosco">Kiosco</button>
+    <button role="tab" aria-selected="false" data-s="lista">Pase de lista</button>
+    <button role="tab" aria-selected="false" data-s="alumnos">Alumnos</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="theme">Tema oscuro</button>
+</header>
+
+<!-- ═════════ KIOSCO ═════════ -->
+<section class="screen on" id="kiosco">
+  <div class="kwrap"><div>
+    <div class="kiosk">
+      <div class="kbar"><b>Plantel Demo</b>
+        <span class="st"><span>Acceso principal, kiosco 1</span><span><i class="sq presente"></i>En línea</span><span id="kq">0 en cola</span></span></div>
+      <div class="kmid">
+        <div>
+          <h2>Acerca tu credencial al lector.</h2>
+          <p>También puedes mostrar el código QR de tu credencial o de tu celular.</p>
+        </div>
+        <div class="know">
+          <div class="t" id="clock">07:42</div>
+          <div class="d" id="kdate">Viernes 7 de noviembre</div>
+          <div class="c" id="kcount">186<small>entradas registradas hoy</small></div>
+        </div>
+      </div>
+      <div class="ktl">
+        <div class="plot" id="plot"></div>
+        <div class="kaxis" id="kaxis"></div>
+      </div>
+      <div class="flash" id="flash" aria-live="assertive"><div class="grid">
+        <div class="k"><i></i><span id="fk">Entrada registrada</span></div>
+        <div class="nm" id="fn"></div>
+        <div class="meta"><div><span>Grado y grupo</span><b id="fg"></b></div><div><span>Hora</span><b id="ft"></b></div><div><span>Método</span><b id="fm"></b></div></div>
+      </div></div>
+    </div>
+    <p class="khelp mono">Prueba: escribe cualquier código y pulsa Enter. Repite el mismo para ver el anti-duplicado.
+      <button class="btn" id="sim">Simular lectura</button></p>
+  </div></div>
+</section>
+
+<!-- ═════════ PASE DE LISTA ═════════ -->
+<section class="screen" id="lista">
+  <div class="app">
+    <aside class="side"><span class="mark">M</span>
+      <a href="#" class="on" title="Pase de lista"><span>Lista</span></a>
+      <a href="#" title="Mis clases"><span>Clases</span></a>
+      <a href="#" title="Mis alumnos"><span>Alumnos</span></a>
+      <span class="me" title="Laura Pineda Ávila">LP</span></aside>
+    <main class="main">
+      <div class="top"><span class="mono">Viernes 7 nov, 1.ª hora</span>
+        <span class="lock mono"><span class="ring"><i style="width:28%"></i></span>Editable de 07:00 a 07:50</span></div>
+      <div class="body">
+        <div class="ttl">
+          <div><h2>Química II, 2.º grado, grupo 4</h2>
+            <p>Cada alumno aparece en el momento en que entró a la escuela. La línea vertical marca el inicio de la clase, a las 07:00.</p></div>
+          <button class="btn primary" id="confirmAll">Confirmar todas las entradas</button>
+        </div>
+        <div class="split" id="split"></div>
+        <div class="legend" id="legend"></div>
+        <div class="rl">
+          <div class="h"><span class="mono muted">Alumno</span><div class="axis" id="axis"></div><span class="c">Presente</span><span class="c">No en aula</span><span class="c">Falta</span></div>
+          <div id="rows"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ═════════ ALUMNOS (DIRECTIVO) ═════════ -->
+<section class="screen" id="alumnos">
+  <div class="app">
+    <aside class="side"><span class="mark">M</span>
+      <a href="#" class="on" title="Alumnos"><span>Alumnos</span></a>
+      <a href="#" title="Docentes"><span>Docentes</span></a>
+      <a href="#" title="Kioscos"><span>Kioscos</span></a>
+      <a href="#" title="Reportes"><span>Reportes</span></a>
+      <span class="me" title="Gabriela Solís">GS</span></aside>
+    <main class="main">
+      <div class="top"><span class="mono">Ciclo 2026–2027</span>
+        <span style="display:flex;gap:8px"><button class="btn">Importar CSV</button><button class="btn primary">Agregar alumno</button></span></div>
+      <div class="body">
+        <div class="ttl"><div><h2>412 alumnos en 12 grupos</h2>
+          <p>Elige un grupo para ver su lista. La barra muestra cuántos alumnos ya tienen credencial NFC vinculada.</p></div></div>
+        <div class="matrix" id="matrix"></div>
+        <div class="tools"><h3 id="gname">2.º grado, grupo 4</h3><input class="search" placeholder="Buscar por nombre o matrícula"></div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Alumno</th><th>Matrícula</th><th>Código QR</th><th>NFC</th><th>Contraseña</th><th></th></tr></thead>
+          <tbody id="dir"></tbody></table></div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const AB = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const code = () => { let c = ""; for (let i = 0; i < 8; i++) c += AB[Math.floor(rnd()*AB.length)]; return c.slice(0,4) + "-" + c.slice(4); };
+const uid = () => Array.from({length:7}, () => Math.floor(rnd()*256).toString(16).padStart(2,"0").toUpperCase()).join(":");
+const pad = n => String(n).padStart(2,"0"), hm = m => pad(Math.floor(m/60)) + ":" + pad(m%60);
+const NAMES = [["Ximena","Ortega Ruiz"],["Diego","Hernández Soto"],["Valeria","Campos Méndez"],["Emiliano","Reyes Aguilar"],["Renata","Vázquez Lara"],["Santiago","Morales Peña"],["Camila","Domínguez Rosas"],["Mateo","Guerrero Salinas"],["Regina","Fuentes Ibarra"],["Leonardo","Castro Núñez"],["Natalia","Ríos Escobar"],["Sebastián","Juárez Mora"],["Fernanda","Delgado Cruz"],["Iker","Navarro Bautista"],["Sofía","Cabrera Medina"],["Joaquín","Herrera Pacheco"],["María José","Luna Treviño"],["Alejandro","Sandoval Ochoa"],["Daniela","Montes Villalobos"],["Rodrigo","Estrada Cortés"],["Andrea","Salazar Ponce"],["Bruno","Mendoza Galván"],["Paula","Cervantes Ortiz"],["Gael","Espinoza Robles"]];
+const A0 = 6*60+30, A1 = 7*60+20, START = 7*60; // eje 06:30 a 07:20, clase a las 07:00
+const pct = m => (m - A0) / (A1 - A0) * 100;
+const students = NAMES.map(([n, ap], i) => {
+  const has = rnd() > .1, base = 6*60 + 38 + Math.floor(Math.pow(rnd(), .7) * 30) + (rnd() > .85 ? 10 : 0);
+  return { i, n, ap, code:code(), uid: rnd() > .15 ? uid() : null, entry: has ? base : null, method: rnd() > .4 ? "NFC" : "QR",
+    state: !has ? "falta" : (i === 6 || i === 15 ? "noaula" : (i % 4 === 0 ? "presente" : "confirmar")), tmp: i % 6 === 3, mat: "2025" + (1100 + i*13) };
+}).sort((a, b) => (a.entry ?? 9999) - (b.entry ?? 9999));
+const LABEL = { presente:"Presente", confirmar:"Por confirmar", noaula:"No en aula", falta:"Falta" };
+
+const show = id => { $$(".tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.s === id));
+  $$(".screen").forEach(s => s.classList.toggle("on", s.id === id)); history.replaceState(null, "", "#" + id); };
+$$(".tabs button").forEach(b => b.onclick = () => show(b.dataset.s));
+if (location.hash.includes("-dark")) document.documentElement.dataset.theme = "dark";
+if (location.hash.length > 1) { show(location.hash.slice(1).split("-")[0]); addEventListener("load", () => setTimeout(() => scrollTo(0, 0))); }
+const syncTheme = () => $("#theme").textContent = document.documentElement.dataset.theme === "dark" ? "Tema claro" : "Tema oscuro";
+syncTheme(); $("#theme").onclick = () => { const d = document.documentElement; d.dataset.theme = d.dataset.theme === "dark" ? "light" : "dark"; syncTheme(); };
+
+/* pase de lista */
+$("#axis").innerHTML = [390, 400, 410, 420, 430].map(m => `<span style="left:${pct(m)}%">${hm(m)}</span>`).join("");
+function renderRoll() {
+  const c = { presente:0, confirmar:0, noaula:0, falta:0 }; students.forEach(s => c[s.state]++);
+  const col = { presente:"var(--blue)", confirmar:"color-mix(in srgb, var(--blue) 35%, transparent)", noaula:"var(--pink)", falta:"var(--muted)" };
+  $("#split").innerHTML = Object.keys(c).map(k => c[k] ? `<i style="flex:${c[k]};background:${col[k]}"></i>` : "").join("");
+  $("#legend").innerHTML = Object.keys(c).map(k => `<span><i class="sq ${k}"></i><b>${c[k]}</b>${LABEL[k]}</span>`).join("");
+  $("#confirmAll").textContent = c.confirmar ? `Confirmar todas las entradas (${c.confirmar})` : "Entradas confirmadas";
+  $("#confirmAll").disabled = !c.confirmar;
+  $("#rows").innerHTML = students.map(s => {
+    const late = s.entry && s.entry > START;
+    const lane = s.entry
+      ? `<span class="dot ${late ? "late" : ""}" style="left:${pct(s.entry)}%"><i class="sq ${s.state}"></i><span class="mono">${hm(s.entry)} ${s.method}${late ? ", tarde" : ""}</span></span>`
+      : `<span class="none">Sin entrada hoy</span>`;
+    const box = v => `<button class="box" role="radio" aria-label="${LABEL[v]}" data-v="${v}" data-i="${s.i}" aria-checked="${s.state === v}" ${v === "noaula" && !s.entry ? "disabled" : ""}><i></i></button>`;
+    return `<div class="r"><div class="who"><b>${s.n} ${s.ap}</b><small>${LABEL[s.state]}</small></div>
+      <div class="lane"><span class="start" style="left:${pct(START)}%"></span>${lane}</div>${box("presente")}${box("noaula")}${box("falta")}</div>`; }).join("");
+}
+$("#rows").onclick = e => { const b = e.target.closest(".box"); if (!b) return; const s = students.find(x => x.i == b.dataset.i);
+  s.state = s.state === b.dataset.v ? (s.entry ? "confirmar" : "falta") : b.dataset.v; renderRoll(); };
+$("#confirmAll").onclick = () => { students.forEach(s => s.state === "confirmar" && (s.state = "presente")); renderRoll(); };
+renderRoll();
+
+/* matriz y tabla */
+const groups = []; for (let g = 1; g <= 3; g++) for (let gr = 1; gr <= 4; gr++) groups.push({ g, gr, n: 30 + Math.floor(rnd()*9), linked: .7 + rnd()*.3, tmp: Math.floor(rnd()*4) });
+let sel = "2-4";
+function renderMatrix() {
+  $("#matrix").innerHTML = `<div class="hd"></div>` + [1,2,3,4].map(g => `<div class="hd">Grupo ${g}</div>`).join("") +
+    [1,2,3].map(g => `<div class="hd">${g}.º grado</div>` + groups.filter(x => x.g === g).map(x => {
+      const on = Math.round(x.linked * 10);
+      return `<button class="cell" aria-pressed="${sel === x.g + "-" + x.gr}" data-k="${x.g}-${x.gr}">
+        <span class="n">${x.n}<small>alumnos</small></span>
+        <span class="meter">${Array.from({length:10}, (_, i) => `<i class="${i < on ? "on" : ""}"></i>`).join("")}</span>
+        <span class="mono"><span>${Math.round(x.linked * x.n)} con NFC</span>${x.tmp ? `<span class="alert">${x.tmp} sin activar</span>` : ""}</span></button>`; }).join("")).join("");
+}
+$("#matrix").onclick = e => { const b = e.target.closest(".cell"); if (!b) return; sel = b.dataset.k; const [g, gr] = sel.split("-");
+  $("#gname").textContent = `${g}.º grado, grupo ${gr}`; renderMatrix(); };
+renderMatrix();
+$("#dir").innerHTML = [...students].sort((a, b) => a.ap.localeCompare(b.ap)).slice(0, 12).map(s => `<tr>
+  <td class="nm">${s.ap}, ${s.n}</td><td class="mono">${s.mat}</td><td class="code">${s.code}</td>
+  <td class="code">${s.uid ?? '<span class="none">Sin vincular</span>'}</td>
+  <td>${s.tmp ? '<span style="display:flex;gap:8px;align-items:center"><i class="sq noaula"></i>Temporal, vence en 9 h</span>' : '<span class="muted">Definitiva</span>'}</td>
+  <td style="text-align:right"><button class="link">Editar</button><button class="link">Credencial</button></td></tr>`).join("");
+
+/* kiosco */
+const K0 = 6*60+30, K1 = 8*60;
+const kp = m => (m - K0) / (K1 - K0) * 100;
+$("#kaxis").innerHTML = [390, 405, 420, 435, 450, 465, 480].map(m => `<span style="left:${kp(m)}%">${hm(m)}</span>`).join("");
+const stacks = {}; let count = 0; const seen = new Map();
+function plotEntry(min, fresh) {
+  const bin = Math.round(min); stacks[bin] = (stacks[bin] ?? 0) + 1; count++;
+  const el = document.createElement("i"); el.style.left = kp(bin) + "%"; el.style.bottom = `calc(${(stacks[bin]-1)} * 1.15cqw)`;
+  if (fresh) el.className = "fresh"; $("#plot").appendChild(el); $("#kcount").firstChild.nodeValue = count;
+}
+for (let k = 0; k < 186; k++) { const m = 6*60+40 + Math.floor(Math.min(1, Math.abs((rnd()+rnd()+rnd())/3)) * 62); plotEntry(m); }
+const nowEl = document.createElement("span"); nowEl.className = "now"; nowEl.innerHTML = `<span>Ahora</span>`; $("#plot").appendChild(nowEl);
+const days = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"], months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+let demoMin = 7*60+42;
+function tick() { const d = new Date(); $("#clock").textContent = pad(d.getHours()) + ":" + pad(d.getMinutes());
+  $("#kdate").textContent = `${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]}`;
+  const real = d.getHours()*60 + d.getMinutes(); nowEl.style.left = kp(real >= K0 && real <= K1 ? real : demoMin) + "%"; }
+tick(); setInterval(tick, 1000);
+let ac; function beep(ok) { try { ac ??= new AudioContext(); const o = ac.createOscillator(), g = ac.createGain();
+  o.frequency.value = ok ? 988 : 247; g.gain.setValueAtTime(.18, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + .35);
+  o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + .4); } catch (e) {} }
+function scan(raw) {
+  const key = raw.trim().toUpperCase(); if (!key) return;
+  const s = students.find(x => x.code.replace("-","") === key.replace("-","")) ?? students[[...key].reduce((a,c) => a + c.charCodeAt(0), 0) % students.length];
+  const d = new Date(), now = d.getTime(), f = $("#flash");
+  f.className = "flash"; void f.offsetWidth; f.className = "flash on";
+  const last = seen.get(s.i);
+  if (last && now - last < 300000) { f.classList.add("dup"); $("#fk").textContent = "Ya tenías entrada registrada, no hace falta volver a pasar"; $("#ft").textContent = pad(new Date(last).getHours()) + ":" + pad(new Date(last).getMinutes()); beep(false); }
+  else { seen.set(s.i, now); $("#fk").textContent = "Entrada registrada"; $("#ft").textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+    beep(true); const real = d.getHours()*60 + d.getMinutes(); setTimeout(() => plotEntry(real >= K0 && real <= K1 ? real : demoMin, true), 1400); }
+  $("#fn").innerHTML = `${s.n}<small>${s.ap}</small>`; $("#fg").textContent = "2.º 4"; $("#fm").textContent = /^[0-9A-F:]{14,}$/.test(key) ? "NFC" : "QR";
+}
+let buf = "";
+document.addEventListener("keydown", e => { if (!$("#kiosco").classList.contains("on") || e.target.matches("input")) return;
+  if (e.key === "Enter") { scan(buf); buf = ""; } else if (e.key.length === 1) buf += e.key; });
+$("#sim").onclick = () => scan(students[Math.floor(Math.random()*students.length)].code);
+</script>
+</body>
+</html>

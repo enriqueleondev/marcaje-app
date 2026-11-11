@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marcaje, dirección 1: Libro de registro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* Dirección 1: Libro de registro.
+   La asistencia como documento oficial: renglones numerados, cifras en serif,
+   horas en mono alineadas como columna contable. El reloj del kiosco es la pieza memorable. */
+:root, [data-theme="dark"] {
+  --bg:#08070C; --surface:#120A22; --header:#1A0B33; --line:#2A2140;
+  --text:#FAF9FC; --muted:#8C82A8; --primary:#5B2DB8; --blue:#5C78F2; --pink:#EC5C9F;
+  --ok:var(--blue); --row-hover:#0F0B1A;
+}
+[data-theme="light"] {
+  --bg:#FAF9FC; --surface:#FFFFFF; --header:#EFEAF8; --line:#E3DEEC;
+  --text:#0E0A18; --muted:#6F6884; --primary:#3B1A78; --blue:#2342D6; --pink:#C02E74;
+  --ok:var(--blue); --row-hover:#F4F1FA;
+}
+:root { --side:#1A0B33; --side-line:#2A2140; --side-text:#FAF9FC; --side-muted:#8C82A8;
+  --serif:"Instrument Serif", Georgia, serif; --sans:"Geist", system-ui, sans-serif; --mono:"Geist Mono", ui-monospace, monospace; --r:2px; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html, body { background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased; }
+button, input, select { font:inherit; color:inherit; }
+button { cursor:pointer; background:none; border:0; }
+:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+.mono { font-family:var(--mono); font-size:12px; letter-spacing:0; }
+.muted { color:var(--muted); }
+
+/* ── barra del documento de diseño (no es parte del producto) ── */
+.deck { display:flex; align-items:center; gap:24px; padding:12px 24px; border-bottom:1px solid var(--line); background:var(--bg); position:sticky; top:0; z-index:40; flex-wrap:wrap; }
+.deck h1 { font-family:var(--serif); font-weight:400; font-size:22px; }
+.deck h1 span { color:var(--muted); }
+.tabs { display:flex; border:1px solid var(--line); border-radius:var(--r); }
+.tabs button { padding:6px 14px; font-size:13px; color:var(--muted); }
+.tabs button + button { border-left:1px solid var(--line); }
+.tabs button[aria-selected="true"] { color:var(--text); background:var(--surface); }
+.deck .spacer { flex:1; }
+.btn { display:inline-flex; align-items:center; gap:8px; height:34px; padding:0 14px; border:1px solid var(--line); border-radius:var(--r); font-size:13px; font-weight:500; white-space:nowrap; }
+.btn:hover { border-color:var(--muted); }
+.btn.primary { background:var(--primary); border-color:var(--primary); color:#FAF9FC; }
+.btn.primary:hover { filter:brightness(1.12); }
+.screen { display:none; }
+.screen.on { display:block; }
+
+/* ── marcadores de estado: cuadrados ── */
+.sq { display:inline-block; width:9px; height:9px; flex:none; border-radius:1px; }
+.sq.presente { background:var(--ok); }
+.sq.confirmar { border:1.5px solid var(--ok); }
+.sq.noaula { background:var(--pink); }
+.sq.falta { border:1.5px solid var(--muted); background:linear-gradient(135deg, transparent 43%, var(--muted) 43% 57%, transparent 57%); }
+
+/* ── app shell ── */
+.app { display:grid; grid-template-columns:232px 1fr; min-height:calc(100vh - 59px); }
+.side { background:var(--side); color:var(--side-text); display:flex; flex-direction:column; border-right:1px solid var(--side-line); }
+.brand { padding:22px 22px 20px; border-bottom:1px solid var(--side-line); }
+.brand b { font-family:var(--serif); font-weight:400; font-size:28px; line-height:1; display:block; }
+.brand small { color:var(--side-muted); font-size:12px; }
+.side nav { padding:12px 0; flex:1; }
+.side nav a { display:flex; justify-content:space-between; padding:8px 22px; color:var(--side-muted); text-decoration:none; font-size:13.5px; border-left:2px solid transparent; }
+.side nav a.on { color:var(--side-text); border-left-color:var(--pink); background:rgba(255,255,255,.03); }
+.side nav a .mono { color:var(--side-muted); }
+.side nav hr { border:0; border-top:1px solid var(--side-line); margin:10px 22px; }
+.who { padding:16px 22px; border-top:1px solid var(--side-line); font-size:13px; }
+.who .mono { color:var(--side-muted); display:block; }
+.main { padding:28px 40px 60px; min-width:0; }
+
+/* ── encabezado de página ── */
+.phead { display:grid; grid-template-columns:1fr auto; gap:8px 24px; align-items:end; padding-bottom:20px; border-bottom:1px solid var(--line); }
+.phead .crumb { grid-column:1/-1; color:var(--muted); }
+.phead h2 { font-family:var(--serif); font-weight:400; font-size:44px; line-height:1; letter-spacing:-.01em; }
+.phead p { color:var(--muted); margin-top:6px; }
+.phead .actions { display:flex; gap:8px; }
+
+/* ── pase de lista ── */
+.window { display:grid; grid-template-columns:auto 1fr auto; gap:16px; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); }
+.track { height:1px; background:var(--line); position:relative; }
+.track i { position:absolute; left:0; top:-1px; height:3px; background:var(--blue); }
+.tally { display:grid; grid-template-columns:repeat(4, 1fr); border-bottom:1px solid var(--line); }
+.tally div { padding:18px 20px 16px; }
+.tally div + div { border-left:1px solid var(--line); }
+.tally .n { font-family:var(--serif); font-size:48px; line-height:1; display:block; }
+.tally .l { display:flex; align-items:center; gap:8px; color:var(--muted); margin-top:6px; }
+.bar { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 0; flex-wrap:wrap; }
+.filters { display:flex; gap:2px; }
+.filters button { padding:6px 10px; color:var(--muted); border-radius:var(--r); font-size:13px; }
+.filters button[aria-pressed="true"] { color:var(--text); background:var(--surface); box-shadow:inset 0 0 0 1px var(--line); }
+
+table { width:100%; border-collapse:collapse; }
+th { text-align:left; font-weight:400; font-family:var(--mono); font-size:12px; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+td { padding:0 12px; height:52px; border-bottom:1px solid var(--line); vertical-align:middle; }
+tbody tr:hover { background:var(--row-hover); }
+td.num { font-family:var(--mono); font-size:12px; color:var(--muted); width:44px; }
+td.name { font-family:var(--serif); font-size:20px; line-height:1.1; }
+td.name small { font-family:var(--sans); font-size:12px; color:var(--muted); display:block; margin-top:2px; }
+td.time { font-family:var(--mono); font-size:13px; font-variant-numeric:tabular-nums; }
+.seg { display:inline-flex; border:1px solid var(--line); border-radius:var(--r); }
+.seg button { display:flex; align-items:center; gap:7px; padding:6px 10px; font-size:12.5px; color:var(--muted); }
+.seg button + button { border-left:1px solid var(--line); }
+.seg button[aria-pressed="true"] { color:var(--text); background:var(--surface); }
+.seg button:disabled { cursor:not-allowed; opacity:.4; }
+.statecol { display:flex; align-items:center; gap:14px; justify-content:flex-end; }
+.statelabel { display:flex; align-items:center; gap:8px; min-width:120px; font-size:13px; }
+.foot { display:flex; justify-content:space-between; padding-top:16px; color:var(--muted); }
+
+/* ── alumnos (directivo) ── */
+.grid-filter { display:flex; gap:28px; padding:16px 0; border-bottom:1px solid var(--line); align-items:center; flex-wrap:wrap; }
+.grid-filter label { display:flex; gap:10px; align-items:center; color:var(--muted); }
+.search { height:34px; border:1px solid var(--line); background:var(--surface); border-radius:var(--r); padding:0 12px; width:260px; }
+.search::placeholder { color:var(--muted); }
+.code { font-family:var(--mono); font-size:13px; letter-spacing:.04em; }
+.code.none { color:var(--muted); letter-spacing:0; }
+.tag { display:inline-flex; align-items:center; gap:7px; font-size:13px; }
+.rowact { color:var(--muted); font-size:13px; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line); }
+.rowact:hover { color:var(--text); }
+input[type=checkbox] { accent-color:var(--primary); width:14px; height:14px; }
+.bulk[hidden] { display:none; }
+.bulk { display:flex; gap:16px; align-items:center; padding:10px 14px; background:var(--header); border:1px solid var(--line); border-radius:var(--r); margin-top:14px; }
+
+/* ── kiosco ── */
+.kwrap { padding:32px; display:grid; place-items:center; min-height:calc(100vh - 59px); }
+.kiosk { width:min(100%, 1340px); aspect-ratio:1340/800; container-type:inline-size; background:var(--bg); border:1px solid var(--line); border-radius:var(--r); position:relative; overflow:hidden; display:grid; grid-template-columns:1.45fr 1fr; }
+.kleft { padding:4.5cqw 4.5cqw 3.4cqw; display:flex; flex-direction:column; border-right:1px solid var(--line); }
+.kleft .org { font-size:1.35cqw; color:var(--muted); display:flex; justify-content:space-between; }
+.kleft .org b { font-family:var(--serif); font-weight:400; color:var(--text); font-size:2.2cqw; }
+.clock { font-family:var(--serif); font-size:19cqw; line-height:.85; letter-spacing:-.03em; margin-top:auto; font-variant-numeric:tabular-nums; }
+.clock .s { font-size:5cqw; color:var(--muted); letter-spacing:0; margin-left:.6cqw; }
+.kdate { font-family:var(--mono); font-size:1.3cqw; color:var(--muted); margin-top:1.6cqw; }
+.prompt { margin-top:auto; padding-top:2cqw; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:end; gap:2cqw; }
+.prompt p { font-size:2.1cqw; line-height:1.25; max-width:30ch; }
+.prompt .mono { font-size:1.1cqw; color:var(--muted); text-align:right; }
+.kright { display:flex; flex-direction:column; background:var(--surface); }
+.kright h3 { font-weight:400; font-family:var(--mono); font-size:1.1cqw; color:var(--muted); padding:2.4cqw 2.6cqw 1.2cqw; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; }
+.feed { list-style:none; flex:1; overflow:hidden; }
+.feed li { display:grid; grid-template-columns:1fr auto; gap:.2cqw 1.2cqw; padding:1.25cqw 2.6cqw; border-bottom:1px solid var(--line); }
+.feed li b { font-family:var(--serif); font-weight:400; font-size:1.8cqw; line-height:1.1; }
+.feed li .t { font-family:var(--mono); font-size:1.3cqw; text-align:right; }
+.feed li .m { font-size:1.05cqw; color:var(--muted); grid-column:1/-1; font-family:var(--mono); }
+.feed li.new { animation:in .5s ease-out; }
+@keyframes in { from { background:var(--header); } }
+.kstatus { display:flex; gap:2cqw; padding:1.3cqw 2.6cqw; border-top:1px solid var(--line); font-family:var(--mono); font-size:1cqw; color:var(--muted); }
+.kstatus .sq { width:.7cqw; height:.7cqw; margin-right:.5cqw; vertical-align:middle; }
+.flash { position:absolute; inset:0; background:var(--primary); color:#FAF9FC; padding:4.5cqw; display:none; flex-direction:column; z-index:5; }
+.flash.on { display:flex; }
+.flash.dup { background:var(--header); color:var(--text); }
+.flash.err { background:var(--bg); color:var(--text); }
+.flash .k { font-family:var(--mono); font-size:1.4cqw; opacity:.8; display:flex; align-items:center; gap:1cqw; }
+.flash .k .sq { width:1.1cqw; height:1.1cqw; background:currentColor; }
+.flash.dup .k .sq, .flash.err .k .sq { background:var(--pink); }
+.flash .nm { font-family:var(--serif); font-size:9.5cqw; line-height:.92; margin-top:auto; letter-spacing:-.02em; }
+.flash .row { display:grid; grid-template-columns:repeat(3, auto) 1fr; gap:5cqw; margin-top:4cqw; padding-top:2cqw; border-top:1px solid rgba(250,249,252,.3); }
+.flash.dup .row, .flash.err .row { border-top-color:var(--line); }
+.flash .row span { font-family:var(--mono); font-size:1.2cqw; opacity:.75; display:block; }
+.flash .row b { font-family:var(--serif); font-weight:400; font-size:3.4cqw; }
+.flash .bar5 { position:absolute; left:0; bottom:0; height:.4cqw; background:var(--pink); width:0; }
+.flash.on .bar5 { animation:drain 1.5s linear forwards; }
+@keyframes drain { from { width:100%; } to { width:0; } }
+.khelp { margin-top:16px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:center; text-align:center; }
+
+@media (max-width:900px) {
+  .app { grid-template-columns:1fr; }
+  .side { display:none; }
+  .main { padding:20px 16px 48px; }
+  .tally { grid-template-columns:repeat(2, 1fr); }
+  .tally div:nth-child(3) { border-left:0; }
+  .tally div:nth-child(n+3) { border-top:1px solid var(--line); }
+  .phead { grid-template-columns:1fr; }
+  .tablewrap { overflow-x:auto; }
+  .kwrap { padding:16px; }
+  .statelabel { display:none; }
+}
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; } }
+</style>
+</head>
+<body>
+
+<header class="deck">
+  <h1>Marcaje <span>Dirección 1, libro de registro</span></h1>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-s="kiosco">Kiosco</button>
+    <button role="tab" aria-selected="false" data-s="lista">Pase de lista</button>
+    <button role="tab" aria-selected="false" data-s="alumnos">Alumnos</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="theme">Tema claro</button>
+</header>
+
+<!-- ═════════ KIOSCO ═════════ -->
+<section class="screen on" id="kiosco">
+  <div class="kwrap">
+    <div>
+      <div class="kiosk" id="kiosk">
+        <div class="kleft">
+          <div class="org"><b>Plantel Demo</b><span class="mono">Kiosco 1, acceso principal</span></div>
+          <div class="clock" id="clock">07:42<span class="s">18</span></div>
+          <div class="kdate" id="kdate">viernes 7 de noviembre de 2026</div>
+          <div class="prompt">
+            <p>Acerca tu credencial al lector o muestra tu código QR.</p>
+            <span class="mono">NFC y QR<br>listos</span>
+          </div>
+        </div>
+        <div class="kright">
+          <h3><span>Últimas entradas</span><span id="kcount">186 hoy</span></h3>
+          <ul class="feed" id="feed"></ul>
+          <div class="kstatus">
+            <span><i class="sq presente"></i>En línea</span>
+            <span id="kqueue">Cola sin pendientes</span>
+            <span>Token k1-7f3a</span>
+          </div>
+        </div>
+        <div class="flash" id="flash" aria-live="assertive">
+          <div class="k"><i class="sq"></i><span id="fk">Entrada registrada</span></div>
+          <div class="nm" id="fn"></div>
+          <div class="row">
+            <div><span>Grado y grupo</span><b id="fg"></b></div>
+            <div><span>Hora</span><b id="ft"></b></div>
+            <div><span>Método</span><b id="fm"></b></div>
+          </div>
+          <div class="bar5"></div>
+        </div>
+      </div>
+      <p class="khelp mono">Prueba: escribe cualquier código y pulsa Enter, como lo haría el lector. Repite el mismo para ver el anti-duplicado.
+        <button class="btn" id="sim">Simular lectura</button></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ PASE DE LISTA ═════════ -->
+<section class="screen" id="lista">
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><b>Marcaje</b><small>Plantel Demo</small></div>
+      <nav>
+        <a href="#" class="on">Pase de lista <span class="mono">ahora</span></a>
+        <a href="#">Mis clases <span class="mono">5</span></a>
+        <a href="#">Mis alumnos <span class="mono">142</span></a>
+        <a href="#">Historial</a>
+      </nav>
+      <div class="who">Laura Pineda Ávila<span class="mono">Docente</span></div>
+    </aside>
+    <main class="main">
+      <div class="phead">
+        <span class="crumb mono">Viernes 7 nov, 2.ª hora, 07:50 a 08:40</span>
+        <div>
+          <h2>Matemáticas III</h2>
+          <p>3.º grado, grupo 2. Aula B-14. 28 alumnos en lista.</p>
+        </div>
+        <div class="actions">
+          <button class="btn">Exportar</button>
+          <button class="btn primary" id="confirmAll">Confirmar todas las entradas</button>
+        </div>
+      </div>
+      <div class="window">
+        <span class="mono">07:50</span>
+        <div class="track"><i style="width:34%"></i></div>
+        <span class="mono">Editable hasta las 08:40, quedan 33 min</span>
+      </div>
+      <div class="tally" id="tally"></div>
+      <div class="bar">
+        <div class="filters" id="filters">
+          <button aria-pressed="true" data-f="all">Todos</button>
+          <button aria-pressed="false" data-f="confirmar">Por confirmar</button>
+          <button aria-pressed="false" data-f="noaula">No en aula</button>
+          <button aria-pressed="false" data-f="falta">Faltas</button>
+        </div>
+        <span class="mono muted">Orden de lista por apellido paterno</span>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Nº</th><th>Alumno</th><th>Entrada</th><th>Método</th><th style="text-align:right">Estado</th></tr></thead>
+          <tbody id="roll"></tbody>
+        </table>
+      </div>
+      <div class="foot mono"><span>Los cambios se guardan al momento.</span><span id="saved">Guardado 07:57:04</span></div>
+    </main>
+  </div>
+</section>
+
+<!-- ═════════ ALUMNOS (DIRECTIVO) ═════════ -->
+<section class="screen" id="alumnos">
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><b>Marcaje</b><small>Plantel Demo</small></div>
+      <nav>
+        <a href="#" class="on">Alumnos <span class="mono">412</span></a>
+        <a href="#">Docentes <span class="mono">31</span></a>
+        <a href="#">Grupos <span class="mono">12</span></a>
+        <a href="#">Credenciales</a>
+        <hr>
+        <a href="#">Kioscos <span class="mono">2</span></a>
+        <a href="#">Reportes</a>
+        <a href="#">Ajustes</a>
+      </nav>
+      <div class="who">Mtra. Gabriela Solís<span class="mono">Dirección</span></div>
+    </aside>
+    <main class="main">
+      <div class="phead">
+        <span class="crumb mono">Ciclo 2026–2027</span>
+        <div>
+          <h2>Alumnos</h2>
+          <p>412 inscritos. 23 sin credencial NFC vinculada.</p>
+        </div>
+        <div class="actions">
+          <button class="btn">Importar CSV</button>
+          <button class="btn primary">Agregar alumno</button>
+        </div>
+      </div>
+      <div class="grid-filter">
+        <input class="search" placeholder="Buscar por nombre, matrícula o código">
+        <label>Grado
+          <span class="seg" id="fgrado"><button aria-pressed="true">Todos</button><button aria-pressed="false">1.º</button><button aria-pressed="false">2.º</button><button aria-pressed="false">3.º</button></span>
+        </label>
+        <label>Grupo
+          <span class="seg" id="fgrupo"><button aria-pressed="true">Todos</button><button aria-pressed="false">1</button><button aria-pressed="false">2</button><button aria-pressed="false">3</button><button aria-pressed="false">4</button></span>
+        </label>
+      </div>
+      <div class="bulk" id="bulk" hidden>
+        <span id="bulkn">2 seleccionados</span>
+        <button class="rowact">Cambiar grado y grupo</button>
+        <button class="rowact">Generar contraseñas temporales</button>
+        <button class="rowact">Imprimir credenciales</button>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th style="width:28px"><input type="checkbox" aria-label="Seleccionar todos" id="selall"></th><th>Alumno</th><th>Matrícula</th><th>Grado y grupo</th><th>Código QR</th><th>NFC</th><th>Acceso</th><th></th></tr></thead>
+          <tbody id="dir"></tbody>
+        </table>
+      </div>
+      <div class="foot mono"><span>Mostrando 1 a 14 de 412</span><span>Anterior  Siguiente</span></div>
+    </main>
+  </div>
+</section>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const AB = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const code = () => { let c = ""; for (let i = 0; i < 8; i++) c += AB[Math.floor(rnd() * AB.length)]; return c.slice(0,4) + "-" + c.slice(4); };
+const uid = () => Array.from({length:7}, () => Math.floor(rnd()*256).toString(16).padStart(2,"0").toUpperCase()).join(":");
+const NAMES = [["Aguilar Reyes","Emiliano"],["Arellano Becerra","Tomás"],["Bautista Navarro","Iker"],["Cabrera Medina","Sofía"],["Campos Méndez","Valeria"],["Castro Núñez","Leonardo"],["Cervantes Ortiz","Paula"],["Cortés Estrada","Rodrigo"],["Cruz Delgado","Fernanda"],["Domínguez Rosas","Camila"],["Escobar Ríos","Natalia"],["Espinoza Robles","Gael"],["Fuentes Ibarra","Regina"],["Galván Mendoza","Bruno"],["Guerrero Salinas","Mateo"],["Hernández Soto","Diego"],["Herrera Pacheco","Joaquín"],["Lara Vázquez","Renata"],["Lozano Zamora","Héctor"],["Luna Treviño","María José"],["Montes Villalobos","Daniela"],["Mora Juárez","Sebastián"],["Ochoa Sandoval","Alejandro"],["Ortega Ruiz","Ximena"],["Peña Morales","Santiago"],["Ponce Salazar","Andrea"],["Quiroz Vega","Ana Paula"],["Rangel Tapia","Isabella"]];
+const t = (h, m, s) => String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0") + (s !== undefined ? ":" + String(s).padStart(2,"0") : "");
+const students = NAMES.map(([ap, n], i) => {
+  const r = rnd(); const has = r > .09;
+  const mins = 6*60 + 52 + Math.floor(rnd() * 46);
+  return { i:i+1, ap, n, code:code(), uid: rnd() > .12 ? uid() : null,
+    entry: has ? t(Math.floor(mins/60), mins%60) : null, method: rnd() > .35 ? "NFC" : "QR",
+    state: has ? (i % 9 === 4 ? "noaula" : (i % 3 === 0 ? "presente" : "confirmar")) : "falta",
+    tmp: i % 7 === 2, g: 1 + (i % 3), gr: 1 + (i % 4), mat: "2024" + String(1300 + i*17) };
+});
+const LABEL = { confirmar:"Por confirmar", presente:"Presente", noaula:"No en aula", falta:"Falta" };
+
+/* tabs + tema */
+const show = id => { $$(".tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.s === id));
+  $$(".screen").forEach(s => s.classList.toggle("on", s.id === id)); history.replaceState(null, "", "#" + id); };
+$$(".tabs button").forEach(b => b.onclick = () => show(b.dataset.s));
+if (location.hash.includes("-light")) { document.documentElement.dataset.theme = "light"; }
+if (location.hash.length > 1) { show(location.hash.slice(1).split("-")[0]); addEventListener("load", () => setTimeout(() => scrollTo(0, 0))); }
+$("#theme").textContent = document.documentElement.dataset.theme === "dark" ? "Tema claro" : "Tema oscuro";
+$("#theme").onclick = () => { const d = document.documentElement, dark = d.dataset.theme === "dark";
+  d.dataset.theme = dark ? "light" : "dark"; $("#theme").textContent = dark ? "Tema oscuro" : "Tema claro"; };
+
+/* pase de lista */
+let filter = "all";
+function renderRoll() {
+  const c = { presente:0, confirmar:0, noaula:0, falta:0 }; students.forEach(s => c[s.state]++);
+  $("#tally").innerHTML = ["presente","confirmar","noaula","falta"].map(k =>
+    `<div><span class="n">${c[k]}</span><span class="l"><i class="sq ${k}"></i>${LABEL[k]}</span></div>`).join("");
+  $("#confirmAll").textContent = c.confirmar ? `Confirmar todas las entradas (${c.confirmar})` : "Todas las entradas confirmadas";
+  $("#confirmAll").disabled = !c.confirmar;
+  $("#roll").innerHTML = students.filter(s => filter === "all" || s.state === filter).map(s => `
+    <tr><td class="num">${String(s.i).padStart(2,"0")}</td>
+      <td class="name">${s.ap}, ${s.n}</td>
+      <td class="time">${s.entry ?? '<span class="muted">sin entrada</span>'}</td>
+      <td class="mono muted">${s.entry ? s.method : ""}</td>
+      <td><div class="statecol">
+        <span class="statelabel"><i class="sq ${s.state}"></i>${LABEL[s.state]}</span>
+        <span class="seg" data-i="${s.i}">
+          <button aria-pressed="${s.state==="presente"}" data-v="presente">Presente</button>
+          <button aria-pressed="${s.state==="noaula"}" data-v="noaula" ${s.entry ? "" : "disabled"}>No en aula</button>
+          <button aria-pressed="${s.state==="falta"}" data-v="falta">Falta</button>
+        </span></div></td></tr>`).join("");
+}
+$("#roll").onclick = e => { const b = e.target.closest("button[data-v]"); if (!b) return;
+  const s = students[b.parentElement.dataset.i - 1]; s.state = s.state === b.dataset.v && s.entry ? "confirmar" : b.dataset.v; stamp(); renderRoll(); };
+$("#confirmAll").onclick = () => { students.forEach(s => { if (s.state === "confirmar") s.state = "presente"; }); stamp(); renderRoll(); };
+$("#filters").onclick = e => { const b = e.target.closest("button"); if (!b) return; filter = b.dataset.f;
+  $$("#filters button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderRoll(); };
+const stamp = () => { const d = new Date(); $("#saved").textContent = "Guardado " + t(d.getHours(), d.getMinutes(), d.getSeconds()); };
+renderRoll();
+
+/* alumnos */
+$("#dir").innerHTML = students.slice(0,14).map(s => `
+  <tr><td><input type="checkbox" class="sel" aria-label="Seleccionar ${s.n}"></td>
+    <td class="name">${s.ap}, ${s.n}</td>
+    <td class="mono">${s.mat}</td>
+    <td>${s.g}.º grado, grupo ${s.gr}</td>
+    <td class="code">${s.code}</td>
+    <td class="code ${s.uid ? "" : "none"}">${s.uid ?? "Sin vincular"}</td>
+    <td><span class="tag"><i class="sq ${s.tmp ? "confirmar" : "presente"}"></i>${s.tmp ? "Temporal, vence en 18 h" : "Activa"}</span></td>
+    <td><button class="rowact">Editar</button></td></tr>`).join("");
+const syncBulk = () => { const n = $$(".sel").filter(x => x.checked).length; $("#bulk").hidden = !n; $("#bulkn").textContent = n + (n === 1 ? " seleccionado" : " seleccionados"); };
+$("#dir").onchange = syncBulk;
+$("#selall").onchange = e => { $$(".sel").forEach(x => x.checked = e.target.checked); syncBulk(); };
+$$(".seg:not([data-i])").forEach(g => g.onclick = e => { const b = e.target.closest("button"); if (!b) return; [...g.children].forEach(x => x.setAttribute("aria-pressed", x === b)); });
+
+/* kiosco */
+const days = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"], months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+function tick() { const d = new Date();
+  $("#clock").innerHTML = t(d.getHours(), d.getMinutes()) + `<span class="s">${String(d.getSeconds()).padStart(2,"0")}</span>`;
+  $("#kdate").textContent = `${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`; }
+tick(); setInterval(tick, 1000);
+let count = 186; const seen = new Map(); const feed = [];
+students.filter(s => s.entry).slice(-7).sort((a, b) => b.entry.localeCompare(a.entry)).forEach(s => feed.push({ s, time: s.entry + ":" + String(Math.floor(rnd()*60)).padStart(2,"0"), m: s.method }));
+const renderFeed = (fresh) => { $("#feed").innerHTML = feed.slice(0,7).map((f, i) => `
+  <li class="${fresh && !i ? "new" : ""}"><b>${f.s.n} ${f.s.ap.split(" ")[0]}</b><span class="t">${f.time}</span>
+  <span class="m">${f.s.g}.º ${f.s.gr}, ${f.m}</span></li>`).join(""); };
+renderFeed();
+let ac; function beep(ok) { try { ac ??= new AudioContext(); const o = ac.createOscillator(), g = ac.createGain();
+  o.frequency.value = ok ? 880 : 220; o.type = "sine"; g.gain.setValueAtTime(.18, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + (ok ? .25 : .5));
+  o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + .5); } catch (e) {} }
+let hide;
+function scan(raw) {
+  const key = raw.trim().toUpperCase(); if (!key) return;
+  const s = students.find(x => x.code.replace("-","") === key.replace("-","") || x.uid === key) ?? students[[...key].reduce((a,c) => a + c.charCodeAt(0), 0) % students.length];
+  const d = new Date(), now = d.getTime(), method = /^[0-9A-F:]{14,}$/.test(key) ? "NFC" : "QR";
+  const f = $("#flash"); f.className = "flash on"; void f.offsetWidth;
+  const last = seen.get(s.i);
+  if (last && now - last < 5*60*1000) {
+    f.classList.add("dup"); $("#fk").textContent = "Ya tenías entrada registrada";
+    $("#ft").textContent = t(new Date(last).getHours(), new Date(last).getMinutes());
+    beep(false);
+  } else {
+    seen.set(s.i, now); $("#fk").textContent = "Entrada registrada"; $("#ft").textContent = t(d.getHours(), d.getMinutes(), d.getSeconds());
+    feed.unshift({ s, time: t(d.getHours(), d.getMinutes(), d.getSeconds()), m: method }); count++; $("#kcount").textContent = count + " hoy";
+    beep(true); setTimeout(() => renderFeed(true), 1500);
+  }
+  $("#fn").textContent = `${s.n} ${s.ap}`; $("#fg").textContent = `${s.g}.º grado, grupo ${s.gr}`; $("#fm").textContent = method;
+  clearTimeout(hide); hide = setTimeout(() => f.className = "flash", 1500);
+}
+let buf = "";
+document.addEventListener("keydown", e => {
+  if (!$("#kiosco").classList.contains("on") || e.target.matches("input")) return;
+  if (e.key === "Enter") { scan(buf); buf = ""; } else if (e.key.length === 1) buf += e.key;
+});
+$("#sim").onclick = () => scan(students[Math.floor(Math.random()*students.length)].code);
+</script>
+</body>
+</html>
